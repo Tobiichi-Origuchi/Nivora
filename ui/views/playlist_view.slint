@@ -1,0 +1,250 @@
+import { Theme } from "../theme.slint";
+import { PageDataState } from "../app_state.slint";
+import { PlayerActions } from "../app_actions.slint";
+import { TrackTable } from "../components/track_table.slint";
+import { SButton } from "../widgets/s_button.slint";
+import { STag } from "../widgets/s_tag.slint";
+
+export component PlaylistView inherits Rectangle {
+    out property <bool> is_collapsed <=> track_table.is_collapsed;
+    in-out property <length> scroll_offset <=> track_table.scroll_offset;
+
+    VerticalLayout {
+        padding-left: 28px;
+        padding-right: 28px;
+        padding-top: 24px;
+        padding-bottom: 16px;
+        spacing: root.is_collapsed ? 12px : 20px;
+
+        animate spacing {
+            duration: 250ms;
+            easing: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        // 歌单详情头部卡片
+        header_container := Rectangle {
+            height: root.is_collapsed ? 72px : 168px;
+
+            animate height {
+                duration: 250ms;
+                easing: cubic-bezier(0.16, 1, 0.3, 1);
+            }
+
+            HorizontalLayout {
+                spacing: root.is_collapsed ? 16px : 24px;
+                alignment: start;
+
+                animate spacing {
+                    duration: 250ms;
+                    easing: cubic-bezier(0.16, 1, 0.3, 1);
+                }
+
+                // 封面图
+                cover_box := Rectangle {
+                    width: root.is_collapsed ? 64px : 160px;
+                    height: root.is_collapsed ? 64px : 160px;
+                    y: 0px;
+                    border-radius: root.is_collapsed ? Theme.radius_md : Theme.radius_xl;
+                    clip: true;
+                    background: Theme.surface_container;
+                    border-width: 1px;
+                    border-color: Theme.glass_border_bright;
+                    drop-shadow-blur: 16px;
+                    drop-shadow-offset-y: 4px;
+                    drop-shadow-color: Theme.shadow_ambient;
+
+                    animate width, height, border-radius {
+                        duration: 250ms;
+                        easing: cubic-bezier(0.16, 1, 0.3, 1);
+                    }
+
+                    if PageDataState.has_playlist_cover: Image {
+                        width: 100%;
+                        height: 100%;
+                        source: PageDataState.current_playlist_cover_image;
+                        image-fit: cover;
+                    }
+                    if !PageDataState.has_playlist_cover: Image {
+                        width: parent.width * 42%;
+                        height: self.width;
+                        source: @image-url("../assets/icons/playlist.svg");
+                        colorize: Theme.text_muted;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+
+                // 右侧信息与操作区
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: start;
+                    spacing: 6px;
+
+                    // 顶部标签栏
+                    top_tags := Rectangle {
+                        height: root.is_collapsed ? 0px : 24px;
+                        opacity: root.is_collapsed ? 0.0 : 1.0;
+                        clip: true;
+
+                        animate height, opacity {
+                            duration: 240ms;
+                            easing: cubic-bezier(0.16, 1, 0.3, 1);
+                        }
+
+                        HorizontalLayout {
+                            spacing: 10px;
+                            alignment: start;
+
+                            STag {
+                                text: "精品歌单";
+                                variant: "primary";
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            if PageDataState.current_playlist.play_count_str != "": STag {
+                                text: "播放量 " + PageDataState.current_playlist.play_count_str;
+                                variant: "neutral";
+                                y: (parent.height - self.height) / 2;
+                            }
+                        }
+                    }
+
+                    // 歌单标题
+                    Text {
+                        text: PageDataState.current_playlist.title != "" ? PageDataState.current_playlist.title : "精选歌单详情";
+                        color: Theme.text_primary;
+                        font-size: root.is_collapsed ? 17px : 24px;
+                        font-weight: root.is_collapsed ? 700 : 800;
+                        overflow: elide;
+
+                        animate font-size {
+                            duration: 250ms;
+                            easing: cubic-bezier(0.16, 1, 0.3, 1);
+                        }
+                    }
+
+                    // 作者与简介栏
+                    middle_info := Rectangle {
+                        height: root.is_collapsed ? 0px : 46px;
+                        opacity: root.is_collapsed ? 0.0 : 1.0;
+                        clip: true;
+
+                        animate height, opacity {
+                            duration: 240ms;
+                            easing: cubic-bezier(0.16, 1, 0.3, 1);
+                        }
+
+                        VerticalLayout {
+                            spacing: 6px;
+                            alignment: start;
+
+                            HorizontalLayout {
+                                spacing: 8px;
+                                alignment: start;
+
+                                Image {
+                                    width: 15px;
+                                    height: 15px;
+                                    source: @image-url("../assets/icons/user.svg");
+                                    colorize: Theme.text_secondary;
+                                    y: (parent.height - self.height) / 2;
+                                }
+
+                                Text {
+                                    text: PageDataState.current_playlist.creator_name != "" ? PageDataState.current_playlist.creator_name : "网易云音乐精选";
+                                    color: Theme.text_secondary;
+                                    font-size: 13px;
+                                    font-weight: 500;
+                                }
+                            }
+
+                            Text {
+                                text: PageDataState.current_playlist.description != "" ? PageDataState.current_playlist.description : "畅享沉浸式无损高清音质体验，心随乐动";
+                                color: Theme.text_muted;
+                                font-size: 12px;
+                                overflow: elide;
+                            }
+                        }
+                    }
+
+                    // 操作按钮组
+                    HorizontalLayout {
+                        spacing: 10px;
+                        alignment: start;
+
+                        SButton {
+                            text: "播放全部";
+                            type: "primary";
+                            variant: "secondary";
+                            has_icon: true;
+                            icon: @image-url("../assets/icons/play.svg");
+                            clicked => {
+                                PlayerActions.play_all_from_list(PageDataState.current_playlist.id);
+                            }
+                        }
+
+                        SButton {
+                            text: "收藏";
+                            variant: "secondary";
+                            has_icon: true;
+                            icon: @image-url("../assets/icons/heart.svg");
+                            clicked => {
+                                PlayerActions.collect_playlist(PageDataState.current_playlist.id);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 分割线
+        Rectangle {
+            height: 1px;
+            background: Theme.glass_border;
+        }
+
+        // 歌单完整曲目表格
+        track_table := TrackTable {
+            vertical-stretch: 1;
+            tracks: PageDataState.playlist_tracks;
+            list_id: PageDataState.current_playlist.id;
+        }
+    }
+
+    // 浮动返回顶部按钮
+    if root.is_collapsed: Rectangle {
+        x: parent.width - self.width - 32px;
+        y: parent.height - self.height - 24px;
+        width: 40px;
+        height: 40px;
+        border-radius: Theme.radius_full;
+        background: top_touch.has_hover ? Theme.primary : Theme.surface_elevated;
+        border-width: 1px;
+        border-color: top_touch.has_hover ? Theme.primary : Theme.glass_border_bright;
+        drop-shadow-blur: 16px;
+        drop-shadow-offset-y: 4px;
+        drop-shadow-color: Theme.shadow_ambient;
+        z: 20;
+
+        transform-scale: top_touch.pressed ? 0.90 : (top_touch.has_hover ? 1.08 : 1.0);
+        animate transform-scale, background, border-color { duration: 150ms; }
+
+        top_touch := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                track_table.scroll_offset = 0px;
+                track_table.is_collapsed = false;
+            }
+        }
+
+        Image {
+            width: 18px;
+            height: 18px;
+            source: @image-url("../assets/icons/chevron_up.svg");
+            colorize: top_touch.has_hover ? #ffffff : Theme.text_primary;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            animate colorize { duration: 150ms; }
+        }
+    }
+}

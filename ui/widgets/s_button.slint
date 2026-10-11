@@ -1,0 +1,101 @@
+import { Theme } from "../theme.slint";
+
+export component SButton inherits Rectangle {
+    in property <string> text: "";
+    in property <image> icon;
+    in property <bool> has_icon: false;
+    in property <length> icon_size: 16px;
+    in property <string> type: "default"; // default, primary, error
+    in property <string> variant: "secondary"; // filled, secondary, tertiary, ghost, text, outline
+    in property <bool> round: true; // 胶囊圆角
+    in property <bool> circle: false; // 纯圆形
+    in property <bool> disabled: false;
+    in property <length> btn_height: 36px;
+    in property <length> btn_width: 0px; // 0px 自适应
+
+    callback clicked();
+
+    height: root.btn_height;
+    width: root.circle ? root.btn_height : (root.btn_width > 0px ? root.btn_width : content_layout.preferred-width);
+    border-radius: root.circle ? root.btn_height / 2 : (root.round ? root.btn_height / 2 : Theme.radius_md);
+
+    property <bool> is_primary: root.type == "primary" || root.variant == "primary";
+    property <bool> is_error: root.type == "error" || root.variant == "error";
+    property <string> eff_variant: (root.variant == "primary" || root.variant == "error") ? "secondary" : root.variant;
+
+    // 背景计算
+    background: root.disabled ? (
+        root.eff_variant == "filled" ? (root.is_primary ? Theme.primary.with_alpha(35%) : Theme.on_surface.with_alpha(6%)) : (
+        root.eff_variant == "secondary" ? (root.is_primary ? Theme.primary.with_alpha(8%) : (root.is_error ? #ef4444.with_alpha(8%) : Theme.on_surface.with_alpha(6%))) : transparent)) : (
+        root.eff_variant == "filled" ? (
+        root.is_primary ? (touch.has_hover ? Theme.primary.brighter(8%) : Theme.primary) : (
+        root.is_error ? (touch.has_hover ? #f87171 : #ef4444) : (
+        touch.has_hover ? Theme.on_surface.with_alpha(90%) : Theme.on_surface))) : (
+        root.eff_variant == "secondary" ? (
+        root.is_primary ? (touch.pressed ? Theme.primary.with_alpha(28%) : (touch.has_hover ? Theme.primary.with_alpha(22%) : Theme.primary.with_alpha(16%))) : (
+        root.is_error ? (touch.pressed ? #ef4444.with_alpha(28%) : (touch.has_hover ? #ef4444.with_alpha(22%) : #ef4444.with_alpha(16%))) : (
+        touch.pressed ? Theme.on_surface.with_alpha(24%) : (touch.has_hover ? Theme.on_surface.with_alpha(18%) : Theme.on_surface.with_alpha(12%))))) : (
+        root.eff_variant == "tertiary" ? (
+        root.is_primary ? (touch.pressed ? Theme.primary.with_alpha(20%) : (touch.has_hover ? Theme.primary.with_alpha(14%) : Theme.primary.with_alpha(8%))) : (
+        touch.pressed ? Theme.on_surface.with_alpha(16%) : (touch.has_hover ? Theme.on_surface.with_alpha(10%) : Theme.on_surface.with_alpha(5%)))) : (
+        root.eff_variant == "outline" || root.eff_variant == "bordered" ? (
+        root.is_primary ? (touch.pressed ? Theme.primary.with_alpha(16%) : (touch.has_hover ? Theme.primary.with_alpha(10%) : Theme.primary.with_alpha(5%))) : (
+        touch.pressed ? Theme.on_surface.with_alpha(10%) : (touch.has_hover ? Theme.on_surface.with_alpha(6%) : transparent))) : (
+        root.eff_variant == "ghost" ? (
+        root.is_primary ? (touch.pressed ? Theme.primary.with_alpha(16%) : (touch.has_hover ? Theme.primary.with_alpha(10%) : transparent)) : (
+        touch.pressed ? Theme.on_surface.with_alpha(14%) : (touch.has_hover ? Theme.on_surface.with_alpha(8%) : transparent))) : transparent)))));
+
+    // 边框计算
+    border-width: (root.eff_variant == "outline" || root.eff_variant == "bordered") ? 1px : 0px;
+    border-color: root.disabled ? transparent : (
+        root.is_primary ? (root.eff_variant == "bordered" ? Theme.primary.with_alpha(30%) : (touch.has_hover ? Theme.primary.with_alpha(25%) : Theme.primary.with_alpha(15%))) : (
+        root.is_error ? (touch.has_hover ? #ef4444.with_alpha(30%) : #ef4444.with_alpha(15%)) : (
+        touch.has_hover ? Theme.outline : Theme.outline_variant)));
+
+    // 物理微缩回弹
+    transform-scale: root.disabled ? 1.0 : (touch.pressed ? 0.96 : 1.0);
+    opacity: root.disabled ? 0.45 : 1.0;
+
+    animate transform-scale, background, border-color, opacity {
+        duration: 150ms;
+        easing: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    touch := TouchArea {
+        enabled: !root.disabled;
+        mouse-cursor: root.disabled ? default : pointer;
+        clicked => { root.clicked(); }
+    }
+
+    // 前景色计算
+    property <color> content_color: root.eff_variant == "filled" ? (
+        root.is_primary ? Theme.on_primary : (root.is_error ? #ffffff : Theme.surface)) : (
+        root.is_primary ? Theme.primary : (
+        root.is_error ? #ef4444 : (
+        touch.has_hover ? Theme.on_surface : Theme.on_surface_variant)));
+
+    content_layout := HorizontalLayout {
+        padding-left: root.circle ? 0px : (root.btn_height <= 28px ? 10px : 14px);
+        padding-right: root.circle ? 0px : (root.btn_height <= 28px ? 10px : 14px);
+        spacing: 6px;
+        alignment: center;
+
+        if root.has_icon: Image {
+            width: root.icon_size;
+            height: root.icon_size;
+            source: root.icon;
+            y: (parent.height - self.height) / 2;
+            colorize: root.content_color;
+            animate colorize { duration: 150ms; }
+        }
+
+        if root.text != "": Text {
+            text: root.text;
+            color: root.content_color;
+            font-size: root.btn_height <= 28px ? 12px : 13px;
+            font-weight: (root.is_primary || root.eff_variant == "filled") ? 600 : 500;
+            vertical-alignment: center;
+            animate color { duration: 150ms; }
+        }
+    }
+}

@@ -1,0 +1,92 @@
+export global Theme {
+    // 默认主色
+    in-out property <color> raw_primary: #fe7971;
+
+    // 暗色 / 浅色模式
+    in-out property <bool> is_dark: true;
+
+    // 实际主色
+    in-out property <color> primary: root.raw_primary;
+    in-out property <color> on_primary: root.is_dark ? #18181b : #ffffff;
+    in-out property <color> primary_container: root.is_dark ? root.raw_primary.darker(30%) : root.raw_primary.with_alpha(15%);
+    in-out property <color> on_primary_container: root.is_dark ? #f4f4f5 : #27272a;
+
+    // 次要强调色
+    in-out property <color> secondary: #a1a1aa;
+    in-out property <color> secondary_container: root.is_dark ? #3f3f46 : #f4f4f5;
+
+    // 表面层级
+    in-out property <color> surface: root.is_dark ? #101014 : #f6f6f6;
+    in-out property <color> surface_panel: root.is_dark ? #18181c : #ffffff;
+    in-out property <color> surface_alt: root.is_dark ? #27272a : #fafafb;
+    in-out property <color> surface_bright: root.is_dark ? #48484e : #ffffff;
+    in-out property <color> surface_container: root.is_dark ? #202026 : #f0f0f2;
+    in-out property <color> surface_variant: root.is_dark ? #2a2a32 : #e4e4e7;
+    in-out property <color> surface_elevated: root.surface_panel;
+    in-out property <color> app_background: root.surface;
+
+    // 交互覆层
+    in-out property <color> surface_hover: root.is_dark ? #ffffff.with_alpha(6%) : #000000.with_alpha(5%);
+    in-out property <color> surface_active: root.is_dark ? #ffffff.with_alpha(10%) : #000000.with_alpha(8%);
+
+    // 轮廓与边框微边
+    in-out property <color> outline: root.is_dark ? #52525b : #d4d4d8;
+    in-out property <color> outline_variant: root.is_dark ? #2e2e33 : #e4e4e7;
+    in-out property <color> border_subtle: root.outline_variant;
+    in-out property <color> border_highlight: root.is_dark ? root.primary.with_alpha(18%) : root.primary.with_alpha(20%);
+    in-out property <color> glass_panel: root.surface_panel;
+    in-out property <color> glass_panel_elevated: root.surface_panel;
+    in-out property <color> glass_border: root.outline_variant;
+    in-out property <color> glass_border_bright: root.is_dark ? #ffffff.with_alpha(10%) : #000000.with_alpha(8%);
+
+    // 文本体系
+    in-out property <color> on_surface: root.is_dark ? #e4e4e7 : #18181b;
+    in-out property <color> on_surface_variant: root.is_dark ? #a1a1aa : #71717a;
+    in-out property <color> text_primary: root.on_surface;
+    in-out property <color> text_secondary: root.on_surface_variant;
+    in-out property <color> text_muted: root.is_dark ? #71717a : #a1a1aa;
+    in-out property <color> text_disabled: root.is_dark ? #52525b : #d4d4d8;
+
+    // 布局度量
+    in property <length> sidebar_width: 240px;
+    in property <length> sidebar_collapsed_width: 64px;
+    in property <length> header_height: 64px;
+    in property <length> player_bar_height: 80px;
+    in property <length> player_bar_floating_height: 76px;
+
+    // 圆角
+    in property <length> radius_xs: 4px;
+    in property <length> radius_sm: 6px;
+    in property <length> radius_md: 8px;
+    in property <length> radius_lg: 12px;
+    in property <length> radius_xl: 16px;
+    in property <length> radius_2xl: 20px;
+    in property <length> radius_cover: 32px;
+    in property <length> radius_full: 9999px;
+
+    // 环境光投影
+    in-out property <color> shadow_color: root.is_dark ? #000000.with_alpha(45%) : #000000.with_alpha(8%);
+    in-out property <color> shadow_ambient: root.shadow_color;
+    in-out property <color> shadow_subtle: root.is_dark ? #000000.with_alpha(25%) : #000000.with_alpha(5%);
+    in-out property <color> shadow_elevated: root.is_dark ? #000000.with_alpha(65%) : #000000.with_alpha(15%);
+    in-out property <color> scrim: #000000.with_alpha(50%);
+
+    // 动效时间
+    in property <duration> duration_fast: 150ms;
+    in property <duration> duration_normal: 200ms;
+    in property <duration> duration_medium: 250ms;
+    in property <duration> duration_slow: 300ms;
+    in property <duration> duration_full_player: 500ms;
+
+    // 主题色更新
+    public function set_theme_color(c: color) {
+        root.raw_primary = c;
+        root.primary = c;
+        root.primary_container = root.is_dark ? c.darker(30%) : c.with_alpha(15%);
+    }
+
+    public function toggle_dark_mode() {
+        root.is_dark = !root.is_dark;
+        root.primary_container = root.is_dark ? root.raw_primary.darker(30%) : root.raw_primary.with_alpha(15%);
+    }
+}

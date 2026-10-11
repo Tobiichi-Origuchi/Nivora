@@ -1,0 +1,262 @@
+import { Theme } from "../theme.slint";
+import { PageDataState } from "../app_state.slint";
+import { PlayerActions } from "../app_actions.slint";
+import { TrackTable } from "../components/track_table.slint";
+import { SButton } from "../widgets/s_button.slint";
+import { STag } from "../widgets/s_tag.slint";
+
+export component DailyView inherits Rectangle {
+    background: Theme.surface;
+    out property <bool> is_collapsed <=> track_table.is_collapsed;
+    in-out property <length> scroll_offset <=> track_table.scroll_offset;
+
+    VerticalLayout {
+        padding-left: 28px;
+        padding-right: 28px;
+        padding-top: 24px;
+        padding-bottom: 16px;
+        spacing: root.is_collapsed ? 12px : 20px;
+
+        animate spacing {
+            duration: 250ms;
+            easing: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        // 顶栏
+        header_container := Rectangle {
+            height: root.is_collapsed ? 72px : 140px;
+
+            animate height {
+                duration: 250ms;
+                easing: cubic-bezier(0.16, 1, 0.3, 1);
+            }
+
+            HorizontalLayout {
+                spacing: root.is_collapsed ? 16px : 24px;
+                alignment: start;
+
+                animate spacing {
+                    duration: 250ms;
+                    easing: cubic-bezier(0.16, 1, 0.3, 1);
+                }
+
+                // 日历磁贴
+                calendar_box := Rectangle {
+                    width: root.is_collapsed ? 64px : 124px;
+                    height: root.is_collapsed ? 64px : 124px;
+                    y: 0px;
+                    border-radius: root.is_collapsed ? Theme.radius_md : Theme.radius_xl;
+                    background: @linear-gradient(135deg, Theme.surface_elevated 0%, Theme.surface_container 100%);
+                    border-width: 1px;
+                    border-color: Theme.glass_border_bright;
+                    drop-shadow-blur: 16px;
+                    drop-shadow-offset-y: 4px;
+                    drop-shadow-color: Theme.shadow_ambient;
+
+                    animate width, height, border-radius {
+                        duration: 250ms;
+                        easing: cubic-bezier(0.16, 1, 0.3, 1);
+                    }
+
+                    // 顶部红色渐变装饰条
+                    Rectangle {
+                        y: 0px;
+                        height: root.is_collapsed ? 4px : 6px;
+                        border-radius: root.is_collapsed ? Theme.radius_md : Theme.radius_xl;
+                        background: @linear-gradient(90deg, Theme.primary 0%, #ff8080 100%);
+                        animate height { duration: 250ms; }
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 0px;
+                        padding-top: root.is_collapsed ? 2px : 4px;
+
+                        // 月份
+                        month_box := Rectangle {
+                            height: root.is_collapsed ? 0px : 16px;
+                            opacity: root.is_collapsed ? 0.0 : 1.0;
+                            clip: true;
+                            animate height, opacity { duration: 240ms; }
+
+                            Text {
+                                text: PageDataState.daily_date_month != "" ? PageDataState.daily_date_month : "OCT";
+                                color: Theme.primary;
+                                font-size: 13px;
+                                font-weight: 700;
+                                horizontal-alignment: center;
+                            }
+                        }
+
+                        // 日期
+                        Text {
+                            text: PageDataState.daily_date_day != "" ? PageDataState.daily_date_day : "08";
+                            color: Theme.text_primary;
+                            font-size: root.is_collapsed ? 24px : 42px;
+                            font-weight: 800;
+                            horizontal-alignment: center;
+                            animate font-size { duration: 250ms; }
+                        }
+
+                        // 星期
+                        weekday_box := Rectangle {
+                            height: root.is_collapsed ? 0px : 14px;
+                            opacity: root.is_collapsed ? 0.0 : 1.0;
+                            clip: true;
+                            animate height, opacity { duration: 240ms; }
+
+                            Text {
+                                text: PageDataState.daily_date_weekday != "" ? PageDataState.daily_date_weekday : "THURSDAY";
+                                color: Theme.text_muted;
+                                font-size: 10px;
+                                font-weight: 600;
+                                horizontal-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                // 标题与操作栏
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: start;
+                    spacing: 6px;
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        alignment: start;
+
+                        Text {
+                            text: "每日歌曲推荐";
+                            color: Theme.text_primary;
+                            font-size: root.is_collapsed ? 17px : 26px;
+                            font-weight: root.is_collapsed ? 700 : 800;
+                            vertical-alignment: center;
+
+                            animate font-size {
+                                duration: 250ms;
+                                easing: cubic-bezier(0.16, 1, 0.3, 1);
+                            }
+                        }
+
+                        tag1_box := Rectangle {
+                            height: root.is_collapsed ? 0px : 24px;
+                            opacity: root.is_collapsed ? 0.0 : 1.0;
+                            clip: true;
+                            animate height, opacity { duration: 240ms; }
+
+                            STag {
+                                text: "专属30首";
+                                variant: "primary";
+                                y: (parent.height - self.height) / 2;
+                            }
+                        }
+
+                        tag2_box := Rectangle {
+                            height: root.is_collapsed ? 0px : 24px;
+                            opacity: root.is_collapsed ? 0.0 : 1.0;
+                            clip: true;
+                            animate height, opacity { duration: 240ms; }
+
+                            STag {
+                                text: "每日6:00更新";
+                                variant: "neutral";
+                                y: (parent.height - self.height) / 2;
+                            }
+                        }
+                    }
+
+                    desc_box := Rectangle {
+                        height: root.is_collapsed ? 0px : 22px;
+                        opacity: root.is_collapsed ? 0.0 : 1.0;
+                        clip: true;
+                        animate height, opacity { duration: 240ms; }
+
+                        Text {
+                            text: "根据你的常听风格与偏好实时演算生成，每日早晨准时呈递";
+                            color: Theme.text_secondary;
+                            font-size: 13px;
+                            overflow: elide;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 10px;
+                        alignment: start;
+
+                        SButton {
+                            text: "播放全部";
+                            type: "primary";
+                            variant: "secondary";
+                            has_icon: true;
+                            icon: @image-url("../assets/icons/play.svg");
+                            clicked => {
+                                PlayerActions.play_all_from_list("daily");
+                            }
+                        }
+
+                        SButton {
+                            text: "收藏歌单";
+                            variant: "secondary";
+                            has_icon: true;
+                            icon: @image-url("../assets/icons/plus.svg");
+                            clicked => {
+                                PlayerActions.collect_playlist("daily");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 分割线
+        Rectangle {
+            height: 1px;
+            background: Theme.glass_border;
+        }
+
+        // 每日推荐歌曲列表
+        track_table := TrackTable {
+            vertical-stretch: 1;
+            tracks: PageDataState.daily_songs;
+            list_id: "daily";
+        }
+    }
+
+    // 浮动返回顶部按钮
+    if root.is_collapsed: Rectangle {
+        x: parent.width - self.width - 32px;
+        y: parent.height - self.height - 24px;
+        width: 40px;
+        height: 40px;
+        border-radius: Theme.radius_full;
+        background: top_touch.has_hover ? Theme.primary : Theme.surface_elevated;
+        border-width: 1px;
+        border-color: top_touch.has_hover ? Theme.primary : Theme.glass_border_bright;
+        drop-shadow-blur: 16px;
+        drop-shadow-offset-y: 4px;
+        drop-shadow-color: Theme.shadow_ambient;
+        z: 20;
+
+        transform-scale: top_touch.pressed ? 0.90 : (top_touch.has_hover ? 1.08 : 1.0);
+        animate transform-scale, background, border-color { duration: 150ms; }
+
+        top_touch := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                track_table.scroll_offset = 0px;
+                track_table.is_collapsed = false;
+            }
+        }
+
+        Image {
+            width: 18px;
+            height: 18px;
+            source: @image-url("../assets/icons/chevron_up.svg");
+            colorize: top_touch.has_hover ? #ffffff : Theme.text_primary;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            animate colorize { duration: 150ms; }
+        }
+    }
+}

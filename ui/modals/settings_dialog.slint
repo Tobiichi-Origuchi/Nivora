@@ -1,0 +1,1041 @@
+import { Theme } from "../theme.slint";
+import { ThemeState, PlayerState } from "../app_state.slint";
+import { ThemeActions, PlayerActions } from "../app_actions.slint";
+import { SCard } from "../widgets/s_card.slint";
+import { SSwitch } from "../widgets/s_switch.slint";
+
+export component SettingsDialog inherits Rectangle {
+    pure function hex_digit(v: int) -> string {
+        if v < 10 { return "\{v}"; }
+        if v == 10 { return "a"; }
+        if v == 11 { return "b"; }
+        if v == 12 { return "c"; }
+        if v == 13 { return "d"; }
+        if v == 14 { return "e"; }
+        return "f";
+    }
+
+    pure function hex_byte(v: int) -> string {
+        return hex_digit(floor(v / 16)) + hex_digit(mod(v, 16));
+    }
+
+    pure function color_to_hex(c: color) -> string {
+        return "#" + hex_byte(c.red) + hex_byte(c.green) + hex_byte(c.blue);
+    }
+
+    pure function quality_display_text(badge: string) -> string {
+        if badge == "标准" { return "标准 (LQ)"; }
+        if badge == "较高" { return "较高 (SQ)"; }
+        if badge == "极高" { return "极高 (HQ)"; }
+        if badge == "SQ" || badge == "无损" { return "无损 (Lossless)"; }
+        if badge == "Hi-Res" { return "高解析度无损 (Hi-Res)"; }
+        return badge;
+    }
+
+    in property <bool> is_open: false;
+    in-out property <string> active_tab: "appearance"; // appearance, player, about
+
+    property <float> picker_hue: 15.0;
+    property <float> picker_sat: 0.6;
+    property <float> picker_val: 0.9;
+
+    public function sync_picker_from_primary() {
+        root.picker_hue = Theme.raw_primary.to-hsv().hue;
+        root.picker_sat = Theme.raw_primary.to-hsv().saturation;
+        root.picker_val = Theme.raw_primary.to-hsv().value;
+    }
+
+    z: 1000;
+    opacity: root.is_open ? 1.0 : 0.0;
+    visible: self.opacity > 0.01;
+
+    animate opacity {
+        duration: root.is_open ? 200ms : 150ms;
+        easing: root.is_open ? ease-out : ease-in;
+    }
+
+    // 半透明背景遮罩
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: Theme.scrim;
+
+        TouchArea {
+            clicked => {
+                ThemeActions.close_settings();
+            }
+        }
+    }
+
+    // 主模态弹窗卡片
+    dialog_card := Rectangle {
+        width: Math.min(840px, root.width - 40px);
+        height: Math.min(580px, root.height * 80%);
+        x: (root.width - self.width) / 2;
+        y: (root.height - self.height) / 2;
+        border-radius: Theme.radius_2xl;
+        background: Theme.surface_panel;
+        border-width: 1px;
+        border-color: Theme.outline_variant;
+        drop-shadow-offset-y: 20px;
+        drop-shadow-blur: 48px;
+        drop-shadow-color: Theme.shadow_elevated;
+        clip: true;
+
+        transform-scale: root.is_open ? 1.0 : 0.96;
+        animate transform-scale {
+            duration: root.is_open ? 200ms : 150ms;
+            easing: root.is_open ? cubic-bezier(0.16, 1, 0.3, 1) : ease-in;
+        }
+
+        // 拦截内部点击
+        TouchArea { }
+
+        HorizontalLayout {
+            spacing: 0px;
+
+            Rectangle {
+                width: 200px;
+                background: Theme.surface_panel;
+
+                Rectangle {
+                    x: parent.width - 1px;
+                    width: 1px;
+                    height: 100%;
+                    background: Theme.outline_variant;
+                }
+
+                VerticalLayout {
+                    padding-top: 24px;
+                    padding-bottom: 20px;
+                    padding-left: 16px;
+                    padding-right: 16px;
+                    spacing: 16px;
+
+                    // 标题
+                    Text {
+                        text: "设置";
+                        color: Theme.text_primary;
+                        font-size: 22px;
+                        font-weight: 700;
+                    }
+
+                    // 分类菜单列表 (外观, 播放, 关于)
+                    VerticalLayout {
+                        spacing: 4px;
+
+                        // 外观
+                        Rectangle {
+                            height: 40px;
+                            border-radius: Theme.radius_md;
+                            property <bool> is_active: root.active_tab == "appearance";
+                            background: is_active ? Theme.primary.with_alpha(12%) : (tab1_touch.has_hover ? Theme.surface_hover : transparent);
+                            animate background { duration: 150ms; }
+
+                            tab1_touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    root.active_tab = "appearance";
+                                }
+                            }
+
+                            if is_active: Rectangle {
+                                x: 0px;
+                                y: 8px;
+                                width: 3px;
+                                height: 24px;
+                                border-radius: Theme.radius_full;
+                                background: Theme.primary;
+                            }
+
+                            HorizontalLayout {
+                                padding-left: 14px;
+                                padding-right: 14px;
+                                spacing: 10px;
+                                alignment: start;
+
+                                Image {
+                                    width: 17px;
+                                    height: 17px;
+                                    source: @image-url("../assets/icons/palette.svg");
+                                    colorize: is_active ? Theme.primary : (tab1_touch.has_hover ? Theme.text_primary : Theme.text_secondary);
+                                    y: (parent.height - self.height) / 2;
+                                }
+
+                                Text {
+                                    text: "外观";
+                                    color: is_active ? Theme.primary : (tab1_touch.has_hover ? Theme.text_primary : Theme.text_secondary);
+                                    font-size: 13.5px;
+                                    font-weight: is_active ? 600 : 500;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+
+                        // 播放
+                        Rectangle {
+                            height: 40px;
+                            border-radius: Theme.radius_md;
+                            property <bool> is_active: root.active_tab == "player";
+                            background: is_active ? Theme.primary.with_alpha(12%) : (tab2_touch.has_hover ? Theme.surface_hover : transparent);
+                            animate background { duration: 150ms; }
+
+                            tab2_touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    root.active_tab = "player";
+                                }
+                            }
+
+                            if is_active: Rectangle {
+                                x: 0px;
+                                y: 8px;
+                                width: 3px;
+                                height: 24px;
+                                border-radius: Theme.radius_full;
+                                background: Theme.primary;
+                            }
+
+                            HorizontalLayout {
+                                padding-left: 14px;
+                                padding-right: 14px;
+                                spacing: 10px;
+                                alignment: start;
+
+                                Image {
+                                    width: 17px;
+                                    height: 17px;
+                                    source: @image-url("../assets/icons/music.svg");
+                                    colorize: is_active ? Theme.primary : (tab2_touch.has_hover ? Theme.text_primary : Theme.text_secondary);
+                                    y: (parent.height - self.height) / 2;
+                                }
+
+                                Text {
+                                    text: "播放";
+                                    color: is_active ? Theme.primary : (tab2_touch.has_hover ? Theme.text_primary : Theme.text_secondary);
+                                    font-size: 13.5px;
+                                    font-weight: is_active ? 600 : 500;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+
+                        // 关于
+                        Rectangle {
+                            height: 40px;
+                            border-radius: Theme.radius_md;
+                            property <bool> is_active: root.active_tab == "about";
+                            background: is_active ? Theme.primary.with_alpha(12%) : (tab3_touch.has_hover ? Theme.surface_hover : transparent);
+                            animate background { duration: 150ms; }
+
+                            tab3_touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    root.active_tab = "about";
+                                }
+                            }
+
+                            if is_active: Rectangle {
+                                x: 0px;
+                                y: 8px;
+                                width: 3px;
+                                height: 24px;
+                                border-radius: Theme.radius_full;
+                                background: Theme.primary;
+                            }
+
+                            HorizontalLayout {
+                                padding-left: 14px;
+                                padding-right: 14px;
+                                spacing: 10px;
+                                alignment: start;
+
+                                Image {
+                                    width: 17px;
+                                    height: 17px;
+                                    source: @image-url("../assets/icons/user.svg");
+                                    colorize: is_active ? Theme.primary : (tab3_touch.has_hover ? Theme.text_primary : Theme.text_secondary);
+                                    y: (parent.height - self.height) / 2;
+                                }
+
+                                Text {
+                                    text: "关于";
+                                    color: is_active ? Theme.primary : (tab3_touch.has_hover ? Theme.text_primary : Theme.text_secondary);
+                                    font-size: 13.5px;
+                                    font-weight: is_active ? 600 : 500;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                    }
+
+                    Text {
+                        text: "Nivora v0.1.0";
+                        color: Theme.text_muted.with_alpha(60%);
+                        font-size: 11px;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
+                background: Theme.surface;
+
+                VerticalLayout {
+                    spacing: 0px;
+
+                    // 顶栏：分类标题与关闭按钮
+                    Rectangle {
+                        height: 56px;
+
+                        // 底部分割线
+                        Rectangle {
+                            y: parent.height - 1px;
+                            width: 100%;
+                            height: 1px;
+                            background: Theme.outline_variant;
+                        }
+
+                        HorizontalLayout {
+                            padding-left: 24px;
+                            padding-right: 16px;
+                            alignment: space-between;
+
+                            Text {
+                                text: root.active_tab == "appearance" ? "外观" :
+                                    (root.active_tab == "player" ? "播放" : "关于");
+                                color: Theme.text_primary;
+                                font-size: 16px;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+
+                            // 关闭按钮
+                            Rectangle {
+                                width: 32px;
+                                height: 32px;
+                                border-radius: Theme.radius_full;
+                                background: close_touch.has_hover ? Theme.surface_hover : transparent;
+                                y: (parent.height - self.height) / 2;
+                                transform-scale: close_touch.pressed ? 0.92 : 1.0;
+                                animate transform-scale, background { duration: 150ms; }
+
+                                close_touch := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => {
+                                        ThemeActions.close_settings();
+                                    }
+                                }
+
+                                Image {
+                                    width: 16px;
+                                    height: 16px;
+                                    source: @image-url("../assets/icons/close.svg");
+                                    colorize: close_touch.has_hover ? Theme.primary : Theme.text_secondary;
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
+                                }
+                            }
+                        }
+                    }
+
+                    // 滚动内容区
+                    Flickable {
+                        vertical-stretch: 1;
+
+                        VerticalLayout {
+                            padding: 24px;
+                            spacing: 16px;
+
+                            // ==================== 外观 (Appearance) ====================
+                            if root.active_tab == "appearance": VerticalLayout {
+                                spacing: 14px;
+
+                                // 主题模式
+                                SCard {
+                                    variant: "settings";
+                                    HorizontalLayout {
+                                        padding: 16px;
+                                        alignment: space-between;
+
+                                        VerticalLayout {
+                                            spacing: 4px;
+                                            alignment: center;
+                                            Text {
+                                                text: "主题模式";
+                                                color: Theme.text_primary;
+                                                font-size: 14px;
+                                                font-weight: 600;
+                                            }
+
+                                            Text {
+                                                text: "应用的颜色主题外观";
+                                                color: Theme.text_muted;
+                                                font-size: 12px;
+                                            }
+                                        }
+
+                                        // 下拉选择按钮
+                                        theme_mode_btn := Rectangle {
+                                            min-width: 110px;
+                                            height: 32px;
+                                            y: (parent.height - self.height) / 2;
+                                            border-radius: Theme.radius_sm;
+                                            background: Theme.surface_container;
+                                            border-width: 1px;
+                                            border-color: theme_mode_pop.is-open ? Theme.primary : Theme.outline_variant;
+
+                                            HorizontalLayout {
+                                                padding-left: 14px;
+                                                padding-right: 12px;
+                                                spacing: 8px;
+                                                alignment: space-between;
+
+                                                Text {
+                                                    text: Theme.is_dark ? "深色模式" : "浅色模式";
+                                                    color: Theme.text_primary;
+                                                    font-size: 13px;
+                                                    font-weight: 600;
+                                                    vertical-alignment: center;
+                                                }
+
+                                                Image {
+                                                    width: 12px;
+                                                    height: 12px;
+                                                    source: @image-url("../assets/icons/chevron_down.svg");
+                                                    colorize: theme_mode_pop.is-open ? Theme.primary : Theme.text_muted;
+                                                    y: (parent.height - self.height) / 2;
+                                                }
+                                            }
+
+                                            TouchArea {
+                                                mouse-cursor: pointer;
+                                                clicked => {
+                                                    theme_mode_pop.show();
+                                                }
+                                            }
+
+                                            theme_mode_pop := PopupWindow {
+                                                x: parent.width - self.width;
+                                                y: parent.height + 4px;
+                                                width: max(parent.width, 130px);
+                                                close-policy: close-on-click-outside;
+
+                                                Rectangle {
+                                                    background: Theme.surface_panel;
+                                                    border-radius: Theme.radius_md;
+                                                    border-width: 1px;
+                                                    border-color: Theme.glass_border;
+                                                    drop-shadow-blur: 16px;
+                                                    drop-shadow-color: #000000.with_alpha(50%);
+
+                                                    VerticalLayout {
+                                                        padding: 6px;
+                                                        spacing: 4px;
+
+                                                        // 深色模式
+                                                        Rectangle {
+                                                            height: 32px;
+                                                            border-radius: Theme.radius_sm;
+                                                            background: dark_opt_t.has_hover ? Theme.surface_hover : transparent;
+                                                            HorizontalLayout {
+                                                                padding-left: 10px;
+                                                                padding-right: 10px;
+                                                                alignment: space-between;
+                                                                Text {
+                                                                    text: "深色模式";
+                                                                    color: Theme.is_dark ? Theme.primary : Theme.text_primary;
+                                                                    font-size: 12.5px;
+                                                                    vertical-alignment: center;
+                                                                }
+
+                                                                if Theme.is_dark: Text {
+                                                                    text: "✓";
+                                                                    color: Theme.primary;
+                                                                    font-size: 12px;
+                                                                    vertical-alignment: center;
+                                                                }
+                                                            }
+
+                                                            dark_opt_t := TouchArea {
+                                                                mouse-cursor: pointer;
+                                                                clicked => {
+                                                                    if !Theme.is_dark {
+                                                                        Theme.toggle_dark_mode();
+                                                                        ThemeActions.toggle_dark_mode();
+                                                                    }
+                                                                    theme_mode_pop.close();
+                                                                }
+                                                            }
+                                                        }
+
+                                                        // 浅色模式
+                                                        Rectangle {
+                                                            height: 32px;
+                                                            border-radius: Theme.radius_sm;
+                                                            background: light_opt_t.has_hover ? Theme.surface_hover : transparent;
+                                                            HorizontalLayout {
+                                                                padding-left: 10px;
+                                                                padding-right: 10px;
+                                                                alignment: space-between;
+                                                                Text {
+                                                                    text: "浅色模式";
+                                                                    color: !Theme.is_dark ? Theme.primary : Theme.text_primary;
+                                                                    font-size: 12.5px;
+                                                                    vertical-alignment: center;
+                                                                }
+
+                                                                if !Theme.is_dark: Text {
+                                                                    text: "✓";
+                                                                    color: Theme.primary;
+                                                                    font-size: 12px;
+                                                                    vertical-alignment: center;
+                                                                }
+                                                            }
+
+                                                            light_opt_t := TouchArea {
+                                                                mouse-cursor: pointer;
+                                                                clicked => {
+                                                                    if Theme.is_dark {
+                                                                        Theme.toggle_dark_mode();
+                                                                        ThemeActions.toggle_dark_mode();
+                                                                    }
+                                                                    theme_mode_pop.close();
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 自定义主题色
+                                SCard {
+                                    variant: "settings";
+                                    HorizontalLayout {
+                                        padding: 16px;
+                                        alignment: space-between;
+
+                                        VerticalLayout {
+                                            spacing: 4px;
+                                            alignment: center;
+                                            Text {
+                                                text: "自定义主题色";
+                                                color: Theme.text_primary;
+                                                font-size: 14px;
+                                                font-weight: 600;
+                                            }
+
+                                            Text {
+                                                text: "自定义来源使用的主色";
+                                                color: Theme.text_muted;
+                                                font-size: 12px;
+                                            }
+                                        }
+
+                                        // 右侧：色块按钮 + Hex 输入框
+                                        HorizontalLayout {
+                                            spacing: 8px;
+                                            alignment: end;
+                                            y: (parent.height - self.height) / 2;
+
+                                            // 色块预览按钮
+                                            color_swatch := Rectangle {
+                                                width: 28px;
+                                                height: 28px;
+                                                y: (parent.height - self.height) / 2;
+                                                border-radius: Theme.radius_sm;
+                                                background: Theme.raw_primary;
+                                                border-width: 1px;
+                                                border-color: color_pop.is-open ? Theme.primary : Theme.outline_variant;
+
+                                                TouchArea {
+                                                    mouse-cursor: pointer;
+                                                    clicked => {
+                                                        root.sync_picker_from_primary();
+                                                        color_pop.show();
+                                                    }
+                                                }
+
+                                                color_pop := PopupWindow {
+                                                    x: parent.width - self.width;
+                                                    y: parent.height + 6px;
+                                                    width: 228px;
+                                                    close-policy: close-on-click-outside;
+
+                                                    Rectangle {
+                                                        background: Theme.surface_panel;
+                                                        border-radius: Theme.radius_lg;
+                                                        border-width: 1px;
+                                                        border-color: Theme.glass_border;
+                                                        drop-shadow-blur: 24px;
+                                                        drop-shadow-color: #000000.with_alpha(70%);
+
+                                                        VerticalLayout {
+                                                            padding: 12px;
+                                                            spacing: 12px;
+
+                                                            // 2D 饱和度 / 明度选取板
+                                                            sv_area := Rectangle {
+                                                                width: 204px;
+                                                                height: 140px;
+                                                                border-radius: 8px;
+                                                                clip: true;
+                                                                background: Colors.hsv(root.picker_hue, 1.0, 1.0);
+
+                                                                // 白色到透明水平渐变 (饱和度)
+                                                                Rectangle {
+                                                                    width: 100%;
+                                                                    height: 100%;
+                                                                    background: @linear-gradient(90deg, #ffffff 0%, #ffffff.with_alpha(0%) 100%);
+                                                                }
+
+                                                                // 透明到黑色垂直渐变 (明度)
+                                                                Rectangle {
+                                                                    width: 100%;
+                                                                    height: 100%;
+                                                                    background: @linear-gradient(180deg, #000000.with_alpha(0%) 0%, #000000 100%);
+                                                                }
+
+                                                                // 取色圆环指针
+                                                                Rectangle {
+                                                                    x: clamp(root.picker_sat * parent.width - 7px, 0px, parent.width - 14px);
+                                                                    y: clamp((1.0 - root.picker_val) * parent.height - 7px, 0px, parent.height - 14px);
+                                                                    width: 14px;
+                                                                    height: 14px;
+                                                                    border-radius: 7px;
+                                                                    border-width: 2px;
+                                                                    border-color: #ffffff;
+                                                                    background: transparent;
+                                                                    drop-shadow-blur: 3px;
+                                                                    drop-shadow-color: #000000;
+                                                                }
+
+                                                                TouchArea {
+                                                                    moved => {
+                                                                        if self.pressed {
+                                                                            root.picker_sat = max(0.0, min(1.0, self.mouse-x / parent.width));
+                                                                            root.picker_val = max(0.0, min(1.0, 1.0 - (self.mouse-y / parent.height)));
+                                                                            let new_c = Colors.hsv(root.picker_hue, root.picker_sat, root.picker_val);
+                                                                            Theme.set_theme_color(new_c);
+                                                                            ThemeActions.set_custom_color(color_to_hex(new_c));
+                                                                        }
+                                                                    }
+                                                                    pointer-event(ev) => {
+                                                                        if ev.kind == PointerEventKind.down {
+                                                                            root.picker_sat = max(0.0, min(1.0, self.mouse-x / parent.width));
+                                                                            root.picker_val = max(0.0, min(1.0, 1.0 - (self.mouse-y / parent.height)));
+                                                                            let new_c = Colors.hsv(root.picker_hue, root.picker_sat, root.picker_val);
+                                                                            Theme.set_theme_color(new_c);
+                                                                            ThemeActions.set_custom_color(color_to_hex(new_c));
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+
+                                                            // 色相彩虹滑条 (Hue bar)
+                                                            hue_bar := Rectangle {
+                                                                width: 204px;
+                                                                height: 12px;
+                                                                border-radius: 6px;
+                                                                background: @linear-gradient(90deg, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);
+
+                                                                // 滑块圆钮
+                                                                Rectangle {
+                                                                    x: clamp((root.picker_hue / 360.0) * parent.width - 8px, 0px, parent.width - 16px);
+                                                                    y: -2px;
+                                                                    width: 16px;
+                                                                    height: 16px;
+                                                                    border-radius: 8px;
+                                                                    background: #ffffff;
+                                                                    border-width: 1px;
+                                                                    border-color: #a1a1aa;
+                                                                    drop-shadow-blur: 4px;
+                                                                    drop-shadow-color: #000000.with_alpha(50%);
+                                                                }
+
+                                                                TouchArea {
+                                                                    moved => {
+                                                                        if self.pressed {
+                                                                            root.picker_hue = max(0.0, min(360.0, (self.mouse-x / parent.width) * 360.0));
+                                                                            let new_c = Colors.hsv(root.picker_hue, root.picker_sat, root.picker_val);
+                                                                            Theme.set_theme_color(new_c);
+                                                                            ThemeActions.set_custom_color(color_to_hex(new_c));
+                                                                        }
+                                                                    }
+                                                                    pointer-event(ev) => {
+                                                                        if ev.kind == PointerEventKind.down {
+                                                                            root.picker_hue = max(0.0, min(360.0, (self.mouse-x / parent.width) * 360.0));
+                                                                            let new_c = Colors.hsv(root.picker_hue, root.picker_sat, root.picker_val);
+                                                                            Theme.set_theme_color(new_c);
+                                                                            ThemeActions.set_custom_color(color_to_hex(new_c));
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            // 十六进制输入框
+                                            Rectangle {
+                                                width: 86px;
+                                                height: 28px;
+                                                y: (parent.height - self.height) / 2;
+                                                border-radius: Theme.radius_sm;
+                                                background: Theme.surface_container;
+                                                border-width: 1px;
+                                                border-color: hex_input.has-focus ? Theme.primary : Theme.outline_variant;
+
+                                                hex_input := TextInput {
+                                                    x: 8px;
+                                                    width: parent.width - 16px;
+                                                    height: parent.height;
+                                                    text: ThemeState.custom_color_hex;
+                                                    color: Theme.text_primary;
+                                                    font-size: 13px;
+                                                    vertical-alignment: center;
+                                                    single-line: true;
+
+                                                    accepted => {
+                                                        ThemeActions.set_custom_color(self.text);
+                                                    }
+                                                    edited => {
+                                                        if self.text.character-count >= 7 {
+                                                            ThemeActions.set_custom_color(self.text);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 封面自适应取色
+                                SCard {
+                                    variant: "settings";
+                                    HorizontalLayout {
+                                        padding: 16px;
+                                        alignment: space-between;
+
+                                        VerticalLayout {
+                                            spacing: 4px;
+                                            alignment: center;
+                                            Text {
+                                                text: "封面自适应取色";
+                                                color: Theme.text_primary;
+                                                font-size: 14px;
+                                                font-weight: 600;
+                                            }
+
+                                            Text {
+                                                text: "根据当前曲目封面自动提取高亮色";
+                                                color: Theme.text_muted;
+                                                font-size: 12px;
+                                            }
+                                        }
+
+                                        SSwitch {
+                                            checked: ThemeState.dynamic_color_enabled;
+                                            y: (parent.height - self.height) / 2;
+                                            toggled(val) => {
+                                                ThemeActions.toggle_dynamic_color();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // ==================== 播放 (Player) ====================
+                            if root.active_tab == "player": VerticalLayout {
+                                spacing: 14px;
+
+                                SCard {
+                                    variant: "settings";
+                                    HorizontalLayout {
+                                        padding: 16px;
+                                        alignment: space-between;
+
+                                        VerticalLayout {
+                                            spacing: 4px;
+                                            alignment: center;
+                                            Text {
+                                                text: "在线播放音质";
+                                                color: Theme.text_primary;
+                                                font-size: 14px;
+                                                font-weight: 600;
+                                            }
+
+                                            Text {
+                                                text: "选择在线播放和下载的默认音质";
+                                                color: Theme.text_muted;
+                                                font-size: 12px;
+                                            }
+                                        }
+
+                                        // 下拉选择按钮
+                                        quality_btn := Rectangle {
+                                            min-width: 130px;
+                                            height: 34px;
+                                            y: (parent.height - self.height) / 2;
+                                            border-radius: Theme.radius_sm;
+                                            background: Theme.surface_container;
+                                            border-width: 1px;
+                                            border-color: quality_pop.is-open ? Theme.primary : Theme.outline_variant;
+
+                                            HorizontalLayout {
+                                                padding-left: 14px;
+                                                padding-right: 12px;
+                                                spacing: 10px;
+                                                alignment: space-between;
+
+                                                Text {
+                                                    text: quality_display_text(PlayerState.quality_badge);
+                                                    color: Theme.text_primary;
+                                                    font-size: 13px;
+                                                    font-weight: 600;
+                                                    vertical-alignment: center;
+                                                }
+
+                                                Image {
+                                                    width: 12px;
+                                                    height: 12px;
+                                                    source: @image-url("../assets/icons/chevron_down.svg");
+                                                    colorize: quality_pop.is-open ? Theme.primary : Theme.text_muted;
+                                                    y: (parent.height - self.height) / 2;
+                                                }
+                                            }
+
+                                            TouchArea {
+                                                mouse-cursor: pointer;
+                                                clicked => {
+                                                    quality_pop.show();
+                                                }
+                                            }
+
+                                            quality_pop := PopupWindow {
+                                                x: parent.width - self.width;
+                                                y: parent.height + 4px;
+                                                width: max(parent.width, 190px);
+                                                close-policy: close-on-click-outside;
+
+                                                Rectangle {
+                                                    background: Theme.surface_panel;
+                                                    border-radius: Theme.radius_md;
+                                                    border-width: 1px;
+                                                    border-color: Theme.glass_border;
+                                                    drop-shadow-blur: 16px;
+                                                    drop-shadow-color: #000000.with_alpha(50%);
+
+                                                    VerticalLayout {
+                                                        padding: 6px;
+                                                        spacing: 4px;
+
+                                                        // 标准 (LQ)
+                                                        Rectangle {
+                                                            height: 32px;
+                                                            border-radius: Theme.radius_sm;
+                                                            background: q1_t.has_hover ? Theme.surface_hover : transparent;
+                                                            HorizontalLayout {
+                                                                padding-left: 10px;
+                                                                padding-right: 10px;
+                                                                alignment: space-between;
+                                                                Text {
+                                                                    text: "标准 (LQ)";
+                                                                    color: PlayerState.quality_badge == "标准" ? Theme.primary : Theme.text_primary;
+                                                                    font-size: 12.5px;
+                                                                    vertical-alignment: center;
+                                                                }
+
+                                                                if PlayerState.quality_badge == "标准": Text {
+                                                                    text: "✓";
+                                                                    color: Theme.primary;
+                                                                    font-size: 12px;
+                                                                    vertical-alignment: center;
+                                                                }
+                                                            }
+
+                                                            q1_t := TouchArea {
+                                                                mouse-cursor: pointer;
+                                                                clicked => {
+                                                                    PlayerActions.select_quality("standard");
+                                                                    quality_pop.close();
+                                                                }
+                                                            }
+                                                        }
+
+                                                        // 较高 (SQ)
+                                                        Rectangle {
+                                                            height: 32px;
+                                                            border-radius: Theme.radius_sm;
+                                                            background: q2_t.has_hover ? Theme.surface_hover : transparent;
+                                                            HorizontalLayout {
+                                                                padding-left: 10px;
+                                                                padding-right: 10px;
+                                                                alignment: space-between;
+                                                                Text {
+                                                                    text: "较高 (SQ)";
+                                                                    color: PlayerState.quality_badge == "较高" ? Theme.primary : Theme.text_primary;
+                                                                    font-size: 12.5px;
+                                                                    vertical-alignment: center;
+                                                                }
+
+                                                                if PlayerState.quality_badge == "较高": Text {
+                                                                    text: "✓";
+                                                                    color: Theme.primary;
+                                                                    font-size: 12px;
+                                                                    vertical-alignment: center;
+                                                                }
+                                                            }
+
+                                                            q2_t := TouchArea {
+                                                                mouse-cursor: pointer;
+                                                                clicked => {
+                                                                    PlayerActions.select_quality("higher");
+                                                                    quality_pop.close();
+                                                                }
+                                                            }
+                                                        }
+
+                                                        // 极高 (HQ)
+                                                        Rectangle {
+                                                            height: 32px;
+                                                            border-radius: Theme.radius_sm;
+                                                            background: q3_t.has_hover ? Theme.surface_hover : transparent;
+                                                            HorizontalLayout {
+                                                                padding-left: 10px;
+                                                                padding-right: 10px;
+                                                                alignment: space-between;
+                                                                Text {
+                                                                    text: "极高 (HQ)";
+                                                                    color: PlayerState.quality_badge == "极高" ? Theme.primary : Theme.text_primary;
+                                                                    font-size: 12.5px;
+                                                                    vertical-alignment: center;
+                                                                }
+
+                                                                if PlayerState.quality_badge == "极高": Text {
+                                                                    text: "✓";
+                                                                    color: Theme.primary;
+                                                                    font-size: 12px;
+                                                                    vertical-alignment: center;
+                                                                }
+                                                            }
+
+                                                            q3_t := TouchArea {
+                                                                mouse-cursor: pointer;
+                                                                clicked => {
+                                                                    PlayerActions.select_quality("exhigh");
+                                                                    quality_pop.close();
+                                                                }
+                                                            }
+                                                        }
+
+                                                        // 无损 (Lossless)
+                                                        Rectangle {
+                                                            height: 32px;
+                                                            border-radius: Theme.radius_sm;
+                                                            background: q4_t.has_hover ? Theme.surface_hover : transparent;
+                                                            HorizontalLayout {
+                                                                padding-left: 10px;
+                                                                padding-right: 10px;
+                                                                alignment: space-between;
+                                                                Text {
+                                                                    text: "无损 (Lossless)";
+                                                                    color: (PlayerState.quality_badge == "SQ" || PlayerState.quality_badge == "无损") ? Theme.primary : Theme.text_primary;
+                                                                    font-size: 12.5px;
+                                                                    vertical-alignment: center;
+                                                                }
+
+                                                                if (PlayerState.quality_badge == "SQ" || PlayerState.quality_badge == "无损"): Text {
+                                                                    text: "✓";
+                                                                    color: Theme.primary;
+                                                                    font-size: 12px;
+                                                                    vertical-alignment: center;
+                                                                }
+                                                            }
+
+                                                            q4_t := TouchArea {
+                                                                mouse-cursor: pointer;
+                                                                clicked => {
+                                                                    PlayerActions.select_quality("lossless");
+                                                                    quality_pop.close();
+                                                                }
+                                                            }
+                                                        }
+
+                                                        // 高解析度无损 (Hi-Res)
+                                                        Rectangle {
+                                                            height: 32px;
+                                                            border-radius: Theme.radius_sm;
+                                                            background: q5_t.has_hover ? Theme.surface_hover : transparent;
+                                                            HorizontalLayout {
+                                                                padding-left: 10px;
+                                                                padding-right: 10px;
+                                                                alignment: space-between;
+                                                                Text {
+                                                                    text: "高解析度无损 (Hi-Res)";
+                                                                    color: PlayerState.quality_badge == "Hi-Res" ? Theme.primary : Theme.text_primary;
+                                                                    font-size: 12.5px;
+                                                                    vertical-alignment: center;
+                                                                }
+
+                                                                if PlayerState.quality_badge == "Hi-Res": Text {
+                                                                    text: "✓";
+                                                                    color: Theme.primary;
+                                                                    font-size: 12px;
+                                                                    vertical-alignment: center;
+                                                                }
+                                                            }
+
+                                                            q5_t := TouchArea {
+                                                                mouse-cursor: pointer;
+                                                                clicked => {
+                                                                    PlayerActions.select_quality("hires");
+                                                                    quality_pop.close();
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // ==================== 关于 (About) ====================
+                            if root.active_tab == "about": VerticalLayout {
+                                padding-top: 60px;
+                                alignment: center;
+                                spacing: 10px;
+
+                                Text {
+                                    text: "Nivora";
+                                    color: Theme.text_primary;
+                                    font-size: 24px;
+                                    font-weight: 700;
+                                    horizontal-alignment: center;
+                                }
+
+                                Text {
+                                    text: "v0.1.0";
+                                    color: Theme.text_muted;
+                                    font-size: 13px;
+                                    horizontal-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

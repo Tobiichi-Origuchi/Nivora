@@ -1,0 +1,53 @@
+import { Theme } from "../theme.slint";
+
+export component SSwitch inherits Rectangle {
+    in-out property <bool> checked: false;
+    in property <bool> disabled: false;
+
+    callback toggled(bool);
+
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+
+    background: root.disabled ? Theme.on_surface.with_alpha(10%) : (
+        root.checked ? (
+        touch.has_hover ? Theme.primary.with_alpha(70%) : Theme.primary.with_alpha(80%)) : (
+        touch.has_hover ? Theme.on_surface.with_alpha(30%) : Theme.on_surface.with_alpha(20%)));
+
+    opacity: root.disabled ? 0.4 : 1.0;
+
+    animate background {
+        duration: 300ms;
+        easing: ease-out;
+    }
+
+    touch := TouchArea {
+        enabled: !root.disabled;
+        mouse-cursor: root.disabled ? default : pointer;
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+
+    // 内部滑动圆点，物理按压横向微拉长
+    thumb := Rectangle {
+        y: (parent.height - self.height) / 2;
+        height: 16px;
+        width: touch.pressed ? 20px : 16px;
+        border-radius: 8px;
+        background: #ffffff;
+        drop-shadow-blur: 4px;
+        drop-shadow-color: #000000.with_alpha(25%);
+
+        x: root.checked ? (
+            touch.pressed ? (parent.width - self.width - 4px) : (parent.width - self.width - 3px)) : (
+            3px);
+
+        animate x, width {
+            duration: 300ms;
+            easing: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    }
+}

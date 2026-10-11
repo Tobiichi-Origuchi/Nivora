@@ -1,0 +1,40 @@
+import { Theme } from "../theme.slint";
+
+export component STag inherits Rectangle {
+    in property <string> text: "";
+    in property <string> variant: "primary"; // primary, vip, sq, hires, neutral, danger, default
+    in property <string> type: ""; // 兼容别名
+    
+    property <string> effective_type: root.type != "" ? root.type : root.variant;
+
+    height: 20px;
+    border-radius: Theme.radius_sm;
+
+    background: (root.effective_type == "vip" || root.effective_type == "danger" || root.effective_type == "error") ? #ef4444.with_alpha(15%)
+        : (root.effective_type == "hires" || root.effective_type == "warning") ? #f59e0b.with_alpha(15%)
+        : (root.effective_type == "primary" ? Theme.primary.with_alpha(15%)
+        : Theme.on_surface.with_alpha(10%));
+
+    border-width: 1px;
+    border-color: (root.effective_type == "vip" || root.effective_type == "danger" || root.effective_type == "error") ? #ef4444.with_alpha(35%)
+        : (root.effective_type == "hires" || root.effective_type == "warning") ? #f59e0b.with_alpha(35%)
+        : (root.effective_type == "primary" ? Theme.primary.with_alpha(30%)
+        : Theme.outline_variant);
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        alignment: center;
+
+        Text {
+            text: root.text;
+            font-size: 10px;
+            font-weight: 600;
+            color: (root.effective_type == "vip" || root.effective_type == "danger" || root.effective_type == "error") ? #ef4444
+                : (root.effective_type == "hires" || root.effective_type == "warning") ? #f59e0b
+                : (root.effective_type == "primary" ? Theme.primary
+                : Theme.on_surface_variant);
+            vertical-alignment: center;
+        }
+    }
+}

@@ -1,0 +1,75 @@
+import { Theme } from "../theme.slint";
+import { SButton } from "s_button.slint";
+
+export component SEmptyState inherits Rectangle {
+    in property <image> icon: @image-url("../assets/icons/music.svg");
+    in property <length> icon_size: 40px;
+    in property <string> title: "暂无内容";
+    in property <string> description: "";
+    in property <string> button_text: "";
+    in property <bool> has_button: root.button_text != "";
+    in property <string> button_type: "primary";
+    in property <string> button_variant: "secondary";
+
+    callback button_clicked();
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 16px;
+
+        // 图标圆盘背景
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: root.icon_size + 36px;
+                height: root.icon_size + 36px;
+                border-radius: (root.icon_size + 36px) / 2;
+                background: Theme.surface_container.with_alpha(60%);
+                border-width: 1px;
+                border-color: Theme.glass_border;
+
+                Image {
+                    width: root.icon_size;
+                    height: root.icon_size;
+                    source: root.icon;
+                    colorize: Theme.text_muted.with_alpha(70%);
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+        }
+
+        // 标题与副标题
+        VerticalLayout {
+            spacing: 6px;
+            alignment: center;
+
+            Text {
+                text: root.title;
+                color: Theme.text_secondary;
+                font-size: 15px;
+                font-weight: 700;
+                horizontal-alignment: center;
+            }
+
+            if root.description != "": Text {
+                text: root.description;
+                color: Theme.text_muted;
+                font-size: 13px;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+        }
+
+        // 交互按钮
+        if root.has_button: HorizontalLayout {
+            alignment: center;
+            SButton {
+                text: root.button_text;
+                type: root.button_type;
+                variant: root.button_variant;
+                clicked => { root.button_clicked(); }
+            }
+        }
+    }
+}

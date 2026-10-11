@@ -1,0 +1,38 @@
+export component SIconSwap inherits Rectangle {
+    in property <image> icon_on;
+    in property <image> icon_off;
+    in property <bool> active: false;
+    in property <length> icon_size: 20px;
+    in property <color> colorize: #ffffff;
+
+    width: root.icon_size;
+    height: root.icon_size;
+
+    Image {
+        width: 100%;
+        height: 100%;
+        source: root.icon_on;
+        colorize: root.colorize;
+        opacity: root.active ? 1.0 : 0.0;
+        transform-scale: root.active ? 1.0 : 0.25;
+
+        animate opacity, transform-scale {
+            duration: 300ms;
+            easing: cubic-bezier(0.2, 0, 0, 1);
+        }
+    }
+
+    Image {
+        width: 100%;
+        height: 100%;
+        source: root.icon_off;
+        colorize: root.colorize;
+        opacity: root.active ? 0.0 : 1.0;
+        transform-scale: root.active ? 0.25 : 1.0;
+
+        animate opacity, transform-scale {
+            duration: 300ms;
+            easing: cubic-bezier(0.2, 0, 0, 1);
+        }
+    }
+}

@@ -1,0 +1,58 @@
+import { Theme } from "../theme.slint";
+import { ToastState } from "../app_state.slint";
+
+export component ToastOverlay inherits Rectangle {
+    width: 100%;
+    height: 100%;
+    clip: false;
+
+    toast_pill := Rectangle {
+        width: content_layout.preferred-width + 36px;
+        height: 40px;
+        x: (parent.width - self.width) / 2;
+        y: ToastState.is_open ? 24px : -60px;
+        opacity: ToastState.is_open ? 1.0 : 0.0;
+        border-radius: Theme.radius_full;
+        background: Theme.surface_elevated;
+        border-width: 1px;
+        border-color: Theme.glass_border;
+        drop-shadow-offset-y: 6px;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #000000.with_alpha(28%);
+
+        animate y, opacity {
+            duration: 250ms;
+            easing: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                ToastState.is_open = false;
+            }
+        }
+
+        content_layout := HorizontalLayout {
+            padding-left: 16px;
+            padding-right: 16px;
+            spacing: 8px;
+            alignment: center;
+
+            Image {
+                width: 16px;
+                height: 16px;
+                source: @image-url("../assets/icons/sparkles.svg");
+                colorize: Theme.primary;
+                y: (parent.height - self.height) / 2;
+            }
+
+            Text {
+                text: ToastState.text;
+                color: Theme.text_primary;
+                font-size: 13px;
+                font-weight: 500;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

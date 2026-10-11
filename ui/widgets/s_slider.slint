@@ -1,0 +1,93 @@
+import { Theme } from "../theme.slint";
+
+export component SSlider inherits Rectangle {
+    in-out property <float> value: 0.0; // 0.0 .. 1.0
+    in property <length> track_height: 3px;
+    in property <length> hover_track_height: 5px;
+    in property <length> thumb_size: 12px;
+    in property <color> active_color: Theme.primary;
+    in property <bool> always_show_thumb: false;
+
+    callback changed(float);
+    callback drag_ended(float);
+
+    property <bool> is_dragging: false;
+    property <float> drag_value: 0.0;
+    property <float> display_value: is_dragging ? drag_value : value;
+
+    min-width: 60px;
+    preferred-width: 160px;
+    height: 18px;
+
+    track_area := TouchArea {
+        mouse-cursor: pointer;
+
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel {
+                if root.is_dragging {
+                    root.is_dragging = false;
+                    root.value = root.drag_value;
+                    root.drag_ended(root.drag_value);
+                }
+            }
+        }
+
+        clicked => {
+            root.is_dragging = false;
+            root.drag_value = clamp(self.mouse-x / self.width, 0.0, 1.0);
+            root.value = root.drag_value;
+            root.changed(root.drag_value);
+            root.drag_ended(root.drag_value);
+        }
+
+        moved => {
+            if self.pressed {
+                root.is_dragging = true;
+                root.drag_value = clamp(self.mouse-x / self.width, 0.0, 1.0);
+                root.changed(root.drag_value);
+            }
+        }
+    }
+
+    // 轨道底槽
+    Rectangle {
+        y: (parent.height - self.height) / 2;
+        width: 100%;
+        height: (track_area.has_hover || root.is_dragging) ? root.hover_track_height : root.track_height;
+        border-radius: self.height / 2;
+        background: Theme.on_surface.with_alpha(15%);
+
+        animate height {
+            duration: 150ms;
+            easing: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        // 高亮填充条
+        Rectangle {
+            x: 0;
+            y: 0;
+            width: parent.width * clamp(root.display_value, 0.0, 1.0);
+            height: 100%;
+            border-radius: parent.border-radius;
+            background: root.active_color;
+
+            // 拖拽滑块圆点
+            Rectangle {
+                x: parent.width - self.width / 2;
+                y: (parent.height - self.height) / 2;
+                width: (track_area.has_hover || root.always_show_thumb || root.is_dragging) ? (track_area.pressed ? root.thumb_size * 1.2 : root.thumb_size) : 0px;
+                height: self.width;
+                border-radius: self.width / 2;
+                background: #ffffff;
+                drop-shadow-offset-y: 1px;
+                drop-shadow-blur: 4px;
+                drop-shadow-color: #000000.with_alpha(30%);
+
+                animate width, height {
+                    duration: 150ms;
+                    easing: cubic-bezier(0.16, 1, 0.3, 1);
+                }
+            }
+        }
+    }
+}

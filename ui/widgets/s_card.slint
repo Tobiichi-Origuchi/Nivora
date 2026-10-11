@@ -1,0 +1,36 @@
+import { Theme } from "../theme.slint";
+
+export component SCard inherits Rectangle {
+    in property <bool> hoverable: false;
+    in property <bool> bordered: true;
+    in property <string> variant: "default"; // default, primary, settings
+    in property <length> card_radius: Theme.radius_lg;
+
+    callback clicked();
+
+    border-radius: root.card_radius;
+    clip: true;
+
+    background: root.variant == "primary" ? Theme.primary.with_alpha(5%)
+        : (root.variant == "settings" ? Theme.surface_panel
+        : (root.hoverable && card_touch.has_hover ? Theme.surface_panel.brighter(4%) : Theme.surface_panel));
+
+    border-width: root.bordered ? 1px : 0px;
+    border-color: root.variant == "primary" ? Theme.primary.with_alpha(20%)
+        : (root.hoverable && card_touch.has_hover ? Theme.outline : Theme.outline_variant);
+
+    drop-shadow-offset-y: (root.hoverable && card_touch.has_hover) ? 4px : 0px;
+    drop-shadow-blur: (root.hoverable && card_touch.has_hover) ? 12px : 0px;
+    drop-shadow-color: Theme.shadow_subtle;
+
+    animate background, border-color, drop-shadow-blur, drop-shadow-offset-y {
+        duration: 200ms;
+        easing: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    card_touch := TouchArea {
+        enabled: root.hoverable;
+        mouse-cursor: root.hoverable ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+}

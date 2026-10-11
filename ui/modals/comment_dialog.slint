@@ -1,0 +1,234 @@
+import { Theme } from "../theme.slint";
+import { PageDataState, PlayerState } from "../app_state.slint";
+import { PlayerActions } from "../app_actions.slint";
+import { CommentUi } from "../types.slint";
+
+export component CommentDialog inherits Rectangle {
+    in property <bool> is_open: false;
+
+    opacity: root.is_open ? 1.0 : 0.0;
+    visible: self.opacity > 0.01;
+
+    animate opacity {
+        duration: root.is_open ? 200ms : 150ms;
+        easing: root.is_open ? ease-out : ease-in;
+    }
+
+    background: Theme.scrim;
+
+    TouchArea {
+        clicked => {
+            PlayerActions.close_comments();
+        }
+    }
+
+    dialog_card := Rectangle {
+        width: 540px;
+        height: 580px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: Theme.radius_2xl;
+        background: Theme.surface_elevated;
+        border-width: 1px;
+        border-color: Theme.glass_border_bright;
+        drop-shadow-blur: 40px;
+        drop-shadow-offset-y: 12px;
+        drop-shadow-color: Theme.shadow_elevated;
+
+        transform-scale: root.is_open ? 1.0 : 0.96;
+        animate transform-scale {
+            duration: root.is_open ? 200ms : 150ms;
+            easing: root.is_open ? cubic-bezier(0.16, 1, 0.3, 1) : ease-in;
+        }
+
+        TouchArea { }
+
+        VerticalLayout {
+            padding: 28px;
+            spacing: 20px;
+
+            // 头部标题与关闭按钮
+            HorizontalLayout {
+                height: 36px;
+                alignment: space-between;
+
+                HorizontalLayout {
+                    spacing: 10px;
+                    alignment: start;
+
+                    Text {
+                        text: "热门评论";
+                        color: Theme.text_primary;
+                        font-size: 20px;
+                        font-weight: 800;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: "(" + PlayerState.track_title + ")";
+                        color: Theme.text_secondary;
+                        font-size: 14px;
+                        font-weight: 500;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                }
+
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: Theme.radius_full;
+                    background: close_touch.has_hover ? Theme.surface_hover : Theme.surface_container;
+                    border-width: 1px;
+                    border-color: Theme.glass_border;
+                    transform-scale: close_touch.pressed ? 0.92 : (close_touch.has_hover ? 1.05 : 1.0);
+
+                    animate transform-scale, background {
+                        duration: 150ms;
+                        easing: cubic-bezier(0.16, 1, 0.3, 1);
+                    }
+
+                    close_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            PlayerActions.close_comments();
+                        }
+                    }
+
+                    Image {
+                        width: 14px;
+                        height: 14px;
+                        source: @image-url("../assets/icons/close.svg");
+                        colorize: close_touch.has_hover ? Theme.text_primary : Theme.text_muted;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+            }
+
+            // 分割线
+            Rectangle {
+                height: 1px;
+                background: Theme.glass_border;
+            }
+
+            // 评论列表滚动区域
+            if PageDataState.current_comments.length > 0: Flickable {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    spacing: 12px;
+
+                    for comm in PageDataState.current_comments: Rectangle {
+                        border-radius: Theme.radius_lg;
+                        background: Theme.surface_container;
+                        border-width: 1px;
+                        border-color: Theme.glass_border;
+
+                        VerticalLayout {
+                            padding: 16px;
+                            spacing: 10px;
+
+                            HorizontalLayout {
+                                alignment: space-between;
+
+                                HorizontalLayout {
+                                    spacing: 10px;
+                                    alignment: start;
+
+                                    // 用户头像占位或圆圈
+                                    Rectangle {
+                                        width: 32px;
+                                        height: 32px;
+                                        border-radius: 16px;
+                                        background: Theme.primary_container;
+                                        border-width: 1px;
+                                        border-color: Theme.primary.with_alpha(30%);
+
+                                        Image {
+                                            width: 16px;
+                                            height: 16px;
+                                            source: @image-url("../assets/icons/user.svg");
+                                            colorize: Theme.primary;
+                                            x: (parent.width - self.width) / 2;
+                                            y: (parent.height - self.height) / 2;
+                                        }
+                                    }
+
+                                    VerticalLayout {
+                                        spacing: 2px;
+                                        alignment: center;
+                                        Text {
+                                            text: comm.user_nickname;
+                                            color: Theme.text_primary;
+                                            font-size: 13px;
+                                            font-weight: 700;
+                                        }
+
+                                        Text {
+                                            text: comm.time_str;
+                                            color: Theme.text_muted;
+                                            font-size: 11px;
+                                        }
+                                    }
+                                }
+
+                                // 点赞数
+                                HorizontalLayout {
+                                    spacing: 4px;
+                                    alignment: end;
+                                    y: (parent.height - self.height) / 2;
+
+                                    Image {
+                                        width: 14px;
+                                        height: 14px;
+                                        source: @image-url("../assets/icons/heart.svg");
+                                        colorize: Theme.text_muted;
+                                        y: (parent.height - self.height) / 2;
+                                    }
+
+                                    Text {
+                                        text: "\{comm.liked_count}";
+                                        color: Theme.text_muted;
+                                        font-size: 12px;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+
+                            // 评论正文
+                            Text {
+                                text: comm.content;
+                                color: Theme.text_secondary;
+                                font-size: 13px;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 无评论占位
+            if PageDataState.current_comments.length == 0: VerticalLayout {
+                alignment: center;
+                spacing: 12px;
+
+                Image {
+                    width: 48px;
+                    height: 48px;
+                    source: @image-url("../assets/icons/chat.svg");
+                    colorize: Theme.text_muted.with_alpha(30%);
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "暂无热门评论，期待你的精彩留言";
+                    color: Theme.text_muted;
+                    font-size: 14px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+    }
+}

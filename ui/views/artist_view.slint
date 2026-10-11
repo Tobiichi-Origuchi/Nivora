@@ -1,0 +1,140 @@
+import { Theme } from "../theme.slint";
+import { PageDataState } from "../app_state.slint";
+import { PlayerActions, NavActions } from "../app_actions.slint";
+import { TrackTable } from "../components/track_table.slint";
+import { PlaylistCard } from "../components/playlist_card.slint";
+
+export component ArtistView inherits Rectangle {
+    background: Theme.app_background;
+
+    Flickable {
+        VerticalLayout {
+            padding: 32px;
+            padding-bottom: 32px;
+            spacing: 28px;
+
+            // 歌手个人资料头部 Banner
+            HorizontalLayout {
+                spacing: 24px;
+                alignment: start;
+
+                // 歌手头像圆环
+                Rectangle {
+                    width: 140px;
+                    height: 140px;
+                    border-radius: 70px;
+                    clip: true;
+                    background: Theme.surface_variant;
+
+                    Image {
+                        width: 64px;
+                        height: 64px;
+                        source: @image-url("../assets/icons/user.svg");
+                        colorize: Theme.text_muted;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+
+                // 歌手资料与一键播放
+                VerticalLayout {
+                    spacing: 12px;
+                    alignment: center;
+
+                    Text {
+                        text: PageDataState.artist_name != "" ? PageDataState.artist_name : "歌手详情";
+                        color: Theme.text_primary;
+                        font-size: 28px;
+                        font-weight: 700;
+                    }
+
+                    Text {
+                        text: PageDataState.artist_desc != "" ? PageDataState.artist_desc : "网易云音乐入驻音乐人";
+                        color: Theme.text_secondary;
+                        font-size: 14px;
+                        overflow: elide;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        alignment: start;
+
+                        // 播放热门 50 首按钮
+                        Rectangle {
+                            height: 38px;
+                            width: 140px;
+                            border-radius: Theme.radius_full;
+                            background: play_touch.has_hover ? Theme.primary.darker(10%) : Theme.primary;
+                            animate background { duration: 150ms; }
+
+                            play_touch := TouchArea {
+                                clicked => {
+                                    PlayerActions.play_all_from_list("artist_hot");
+                                }
+                            }
+
+                            HorizontalLayout {
+                                alignment: center;
+                                spacing: 8px;
+
+                                Image {
+                                    width: 16px;
+                                    height: 16px;
+                                    source: @image-url("../assets/icons/play.svg");
+                                    colorize: #ffffff;
+                                    y: (parent.height - self.height) / 2;
+                                }
+
+                                Text {
+                                    text: "播放热门歌曲";
+                                    color: #ffffff;
+                                    font-size: 14px;
+                                    font-weight: 600;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 热门曲目
+            VerticalLayout {
+                spacing: 12px;
+
+                Text {
+                    text: "热门歌曲";
+                    color: Theme.text_primary;
+                    font-size: 20px;
+                    font-weight: 700;
+                }
+
+                TrackTable {
+                    height: 420px;
+                    tracks: PageDataState.artist_hot_songs;
+                }
+            }
+
+            // 歌手专辑列表网格
+            if PageDataState.artist_albums.length > 0: VerticalLayout {
+                spacing: 12px;
+
+                Text {
+                    text: "专辑与精选";
+                    color: Theme.text_primary;
+                    font-size: 20px;
+                    font-weight: 700;
+                }
+
+                HorizontalLayout {
+                    spacing: 16px;
+                    alignment: start;
+
+                    for alb in PageDataState.artist_albums: PlaylistCard {
+                        playlist: alb;
+                    }
+                }
+            }
+        }
+    }
+}

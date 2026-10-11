@@ -1,0 +1,78 @@
+/// 播放控制动作回调契约
+export global PlayerActions {
+    callback toggle_play();
+    callback prev_track();
+    callback next_track();
+    callback seek(float);
+    callback change_volume(float);
+    callback toggle_mute();
+    callback toggle_play_mode();
+    callback toggle_lyric_view();
+    callback toggle_queue_drawer();
+    callback play_track_by_id(string);
+    callback play_all_from_list(string);
+    callback toggle_track_like(string);
+    callback clear_queue();
+    callback remove_queue_track(int);
+    callback cycle_quality();
+    callback select_quality(string);
+    callback open_comments();
+    callback close_comments();
+    callback play_random();
+    callback collect_playlist(string);
+}
+
+/// 导航与路由回调契约
+export global NavActions {
+    callback navigate_to(string);
+    callback navigate_to_artist(string, string);
+    callback go_back();
+    callback go_forward();
+    callback trigger_search(string);
+    callback open_playlist_detail(string);
+    callback toggle_sidebar();
+}
+
+/// 登录与用户认证动作契约
+export global AuthActions {
+    callback open_login();
+    callback close_login();
+    callback refresh_qr();
+    callback logout();
+}
+
+/// 歌词交互动作契约
+export global LyricActions {
+    callback seek_to_timestamp(int);
+    callback copy_current_lyric();
+    callback adjust_offset(float);
+}
+
+/// 主题与音效交互动作契约
+export global ThemeActions {
+    callback set_custom_color(string);
+    callback toggle_dynamic_color();
+    callback toggle_dark_mode();
+    callback open_equalizer();
+    callback close_equalizer();
+    callback set_eq_gain(int, float);
+    callback set_eq_preset(string);
+    callback open_settings();
+    callback close_settings();
+}
+
+/// 本地音乐库动作契约
+export global LibraryActions {
+    callback scan_local_folder();
+    callback download_track(string);
+    callback switch_library_tab(string);
+    callback open_download_folder();
+    callback create_new_playlist();
+}
+
+/// 窗口控制动作契约
+export global WindowActions {
+    callback minimize();
+    callback toggle_maximize();
+    callback close();
+}

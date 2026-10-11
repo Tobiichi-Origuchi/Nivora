@@ -1,0 +1,24 @@
+import { Theme } from "../theme.slint";
+import { PageDataState } from "../app_state.slint";
+
+export component Visualizer inherits Rectangle {
+    height: 48px;
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 3px;
+        alignment: center;
+
+        for bar_val in PageDataState.visualizer_bars: Rectangle {
+            width: 4px;
+            height: clamp(parent.height * bar_val, 4px, parent.height);
+            y: parent.height - self.height;
+            border-radius: 2px;
+            background: @linear-gradient(180deg, Theme.primary 0%, Theme.primary.with_alpha(30%) 100%);
+            animate height {
+                duration: 75ms;
+                easing: ease-out;
+            }
+        }
+    }
+}

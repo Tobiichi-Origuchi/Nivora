@@ -1,0 +1,203 @@
+import { Theme } from "../theme.slint";
+import { PageDataState } from "../app_state.slint";
+import { PlayerActions } from "../app_actions.slint";
+import { TrackTable } from "../components/track_table.slint";
+import { SButton } from "../widgets/s_button.slint";
+import { STag } from "../widgets/s_tag.slint";
+
+export component LikedView inherits Rectangle {
+    out property <bool> is_collapsed <=> track_table.is_collapsed;
+    in-out property <length> scroll_offset <=> track_table.scroll_offset;
+
+    VerticalLayout {
+        padding-left: 28px;
+        padding-right: 28px;
+        padding-top: 24px;
+        padding-bottom: 16px;
+        spacing: root.is_collapsed ? 12px : 20px;
+
+        animate spacing {
+            duration: 250ms;
+            easing: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        // 顶栏：心动封面与说明
+        header_container := Rectangle {
+            height: root.is_collapsed ? 72px : 144px;
+
+            animate height {
+                duration: 250ms;
+                easing: cubic-bezier(0.16, 1, 0.3, 1);
+            }
+
+            HorizontalLayout {
+                spacing: root.is_collapsed ? 16px : 24px;
+                alignment: start;
+
+                animate spacing {
+                    duration: 250ms;
+                    easing: cubic-bezier(0.16, 1, 0.3, 1);
+                }
+
+                cover_box := Rectangle {
+                    width: root.is_collapsed ? 64px : 140px;
+                    height: root.is_collapsed ? 64px : 140px;
+                    y: 0px;
+                    border-radius: root.is_collapsed ? Theme.radius_md : Theme.radius_xl;
+                    background: @linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+                    border-width: 1px;
+                    border-color: #f87171.with_alpha(30%);
+                    drop-shadow-blur: 16px;
+                    drop-shadow-offset-y: 4px;
+                    drop-shadow-color: #ef4444.with_alpha(35%);
+
+                    animate width, height, border-radius {
+                        duration: 250ms;
+                        easing: cubic-bezier(0.16, 1, 0.3, 1);
+                    }
+
+                    Image {
+                        width: parent.width * 40%;
+                        height: self.width;
+                        source: @image-url("../assets/icons/heart_filled.svg");
+                        colorize: #ffffff;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+
+                // 标题与说明区域
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: start;
+                    spacing: 6px;
+
+                    // 标题与标签
+                    HorizontalLayout {
+                        spacing: 12px;
+                        alignment: start;
+
+                        Text {
+                            text: "我喜欢的音乐";
+                            color: Theme.text_primary;
+                            font-size: root.is_collapsed ? 17px : 26px;
+                            font-weight: root.is_collapsed ? 700 : 800;
+                            vertical-alignment: center;
+
+                            animate font-size {
+                                duration: 250ms;
+                                easing: cubic-bezier(0.16, 1, 0.3, 1);
+                            }
+                        }
+
+                        // 标签
+                        tag_box := Rectangle {
+                            height: root.is_collapsed ? 0px : 24px;
+                            opacity: root.is_collapsed ? 0.0 : 1.0;
+                            clip: true;
+
+                            animate height, opacity {
+                                duration: 240ms;
+                                easing: cubic-bezier(0.16, 1, 0.3, 1);
+                            }
+
+                            STag {
+                                text: "红心收藏";
+                                variant: "danger";
+                                y: (parent.height - self.height) / 2;
+                            }
+                        }
+                    }
+
+                    // 描述简介
+                    middle_info := Rectangle {
+                        height: root.is_collapsed ? 0px : 24px;
+                        opacity: root.is_collapsed ? 0.0 : 1.0;
+                        clip: true;
+
+                        animate height, opacity {
+                            duration: 240ms;
+                            easing: cubic-bezier(0.16, 1, 0.3, 1);
+                        }
+
+                        Text {
+                            text: "每一首心动的旋律，都是时光里不可磨灭的印记与共鸣";
+                            color: Theme.text_secondary;
+                            font-size: 13px;
+                            overflow: elide;
+                        }
+                    }
+
+                    // 操作按钮组
+                    HorizontalLayout {
+                        spacing: 10px;
+                        alignment: start;
+
+                        SButton {
+                            text: "播放全部";
+                            type: "primary";
+                            variant: "secondary";
+                            has_icon: true;
+                            icon: @image-url("../assets/icons/play.svg");
+                            clicked => {
+                                PlayerActions.play_all_from_list("liked");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 分割线
+        Rectangle {
+            height: 1px;
+            background: Theme.glass_border;
+        }
+
+        // 歌曲列表
+        track_table := TrackTable {
+            vertical-stretch: 1;
+            tracks: PageDataState.liked_songs;
+            list_id: "liked";
+            empty_title: "暂无我喜欢的音乐";
+            empty_desc: "在播放栏或歌曲列表中点击红心即可将喜爱的曲目收藏到这里";
+        }
+    }
+
+    // 浮动返回顶部按钮
+    if root.is_collapsed: Rectangle {
+        x: parent.width - self.width - 32px;
+        y: parent.height - self.height - 24px;
+        width: 40px;
+        height: 40px;
+        border-radius: Theme.radius_full;
+        background: top_touch.has_hover ? Theme.primary : Theme.surface_elevated;
+        border-width: 1px;
+        border-color: top_touch.has_hover ? Theme.primary : Theme.glass_border_bright;
+        drop-shadow-blur: 16px;
+        drop-shadow-offset-y: 4px;
+        drop-shadow-color: Theme.shadow_ambient;
+        z: 20;
+
+        transform-scale: top_touch.pressed ? 0.90 : (top_touch.has_hover ? 1.08 : 1.0);
+        animate transform-scale, background, border-color { duration: 150ms; }
+
+        top_touch := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                track_table.scroll_offset = 0px;
+                track_table.is_collapsed = false;
+            }
+        }
+
+        Image {
+            width: 18px;
+            height: 18px;
+            source: @image-url("../assets/icons/chevron_up.svg");
+            colorize: top_touch.has_hover ? #ffffff : Theme.text_primary;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            animate colorize { duration: 150ms; }
+        }
+    }
+}

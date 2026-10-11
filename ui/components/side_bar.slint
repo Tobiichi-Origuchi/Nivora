@@ -1,0 +1,310 @@
+import { Theme } from "../theme.slint";
+import { NavState, PageDataState } from "../app_state.slint";
+import {
+    NavActions,
+    PlayerActions,
+    LibraryActions,
+} from "../app_actions.slint";
+import { PlaylistUi } from "../types.slint";
+import { SButton } from "../widgets/s_button.slint";
+
+component SideBarItem inherits Rectangle {
+    in property <string> title: "";
+    in property <image> icon;
+    in property <string> page_key: "";
+    in property <bool> is_active: NavState.current_page == root.page_key;
+    in property <bool> has_trailing: false;
+    in property <image> trailing_icon;
+
+    callback clicked();
+    callback trailing_clicked();
+
+    height: 40px;
+    border-radius: Theme.radius_md;
+    background: root.is_active ? Theme.primary.with_alpha(12%) : (touch.has_hover ? Theme.surface_hover : transparent);
+    transform-scale: touch.pressed ? 0.98 : 1.0;
+    animate background, transform-scale { duration: 150ms; }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+
+    // 激活状态左侧垂直高亮光条
+    if root.is_active: Rectangle {
+        x: 0px;
+        y: 8px;
+        width: 3px;
+        height: 24px;
+        border-radius: Theme.radius_full;
+        background: Theme.primary;
+    }
+
+    HorizontalLayout {
+        padding-left: NavState.sidebar_collapsed ? 0px : 12px;
+        padding-right: NavState.sidebar_collapsed ? 0px : 8px;
+        alignment: NavState.sidebar_collapsed ? center : start;
+        spacing: 12px;
+
+        Image {
+            width: 18px;
+            height: 18px;
+            source: root.icon;
+            colorize: root.is_active ? Theme.primary : (touch.has_hover ? Theme.text_primary : Theme.text_secondary);
+            y: (parent.height - self.height) / 2;
+            animate colorize { duration: 150ms; }
+        }
+
+        if !NavState.sidebar_collapsed: Text {
+            text: root.title;
+            color: root.is_active ? Theme.primary : (touch.has_hover ? Theme.text_primary : Theme.text_secondary);
+            font-size: 14px;
+            font-weight: root.is_active ? 600 : 500;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            animate color { duration: 150ms; }
+        }
+
+        if !NavState.sidebar_collapsed && root.has_trailing: Rectangle {
+            width: 26px;
+            height: 26px;
+            border-radius: Theme.radius_full;
+            background: trailing_touch.has_hover ? Theme.surface_hover : transparent;
+            transform-scale: trailing_touch.pressed ? 0.92 : 1.0;
+            y: (parent.height - self.height) / 2;
+
+            trailing_touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.trailing_clicked(); }
+            }
+
+            Image {
+                width: 16px;
+                height: 16px;
+                source: root.trailing_icon;
+                colorize: trailing_touch.has_hover ? Theme.primary : Theme.text_secondary;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                animate colorize { duration: 150ms; }
+            }
+        }
+    }
+}
+
+export component SideBar inherits Rectangle {
+    width: NavState.sidebar_collapsed ? Theme.sidebar_collapsed_width : Theme.sidebar_width;
+    background: Theme.surface_panel;
+    border-width: 1px;
+    border-color: Theme.outline_variant;
+    clip: true;
+
+    animate width {
+        duration: Theme.duration_slow;
+        easing: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    VerticalLayout {
+        padding-top: 0px;
+        padding-bottom: 16px;
+        padding-left: NavState.sidebar_collapsed ? 8px : 12px;
+        padding-right: NavState.sidebar_collapsed ? 8px : 12px;
+        spacing: 4px;
+
+        // 顶栏 Logo 区
+        Rectangle {
+            height: Theme.header_height;
+
+            logo_touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { NavActions.navigate_to("home"); }
+            }
+
+            HorizontalLayout {
+                alignment: NavState.sidebar_collapsed ? center : start;
+                spacing: 10px;
+                padding-left: NavState.sidebar_collapsed ? 0px : 8px;
+
+                // Logo SVG
+                Image {
+                    width: 30px;
+                    height: 30px;
+                    source: @image-url("../assets/icons/logo.svg");
+                    y: (parent.height - self.height) / 2;
+                    transform-scale: logo_touch.pressed ? 1.0 : (logo_touch.has_hover ? 1.05 : 1.0);
+                    animate transform-scale { duration: 150ms; }
+                }
+
+                // 品牌标题文字
+                if !NavState.sidebar_collapsed: Text {
+                    text: "Nivora";
+                    color: Theme.primary;
+                    font-size: 22px;
+                    font-weight: 800;
+                    vertical-alignment: center;
+                    letter-spacing: 0.5px;
+                }
+            }
+        }
+
+        // 菜单项滚动区域
+        Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                spacing: 4px;
+                alignment: start;
+
+                // 发现音乐
+                SideBarItem {
+                    title: "首页";
+                    icon: @image-url("../assets/icons/home.svg");
+                    page_key: "home";
+                    clicked => { NavActions.navigate_to("home"); }
+                }
+
+                SideBarItem {
+                    title: "每日推荐";
+                    icon: @image-url("../assets/icons/calendar.svg");
+                    page_key: "daily";
+                    clicked => { NavActions.navigate_to("daily"); }
+                }
+
+                SideBarItem {
+                    title: "艺术家";
+                    icon: @image-url("../assets/icons/user.svg");
+                    page_key: "artist";
+                    clicked => { NavActions.navigate_to("artist"); }
+                }
+
+                SideBarItem {
+                    title: "听歌排行";
+                    icon: @image-url("../assets/icons/chart_pie.svg");
+                    page_key: "stats";
+                    clicked => { NavActions.navigate_to("stats"); }
+                }
+
+                // 细分隔线
+                Rectangle {
+                    height: 1px;
+                    background: Theme.outline_variant;
+                }
+
+                // 我的音乐
+                SideBarItem {
+                    title: "我喜欢的音乐";
+                    icon: (NavState.current_page == "liked") ? @image-url("../assets/icons/heart_filled.svg") : @image-url("../assets/icons/heart.svg");
+                    page_key: "liked";
+                    has_trailing: true;
+                    trailing_icon: @image-url("../assets/icons/heart_mode.svg");
+                    clicked => { NavActions.navigate_to("liked"); }
+                    trailing_clicked => {
+                        PlayerActions.play_all_from_list("liked");
+                    }
+                }
+
+                SideBarItem {
+                    title: "本地与下载";
+                    icon: @image-url("../assets/icons/download.svg");
+                    page_key: "library";
+                    clicked => { NavActions.navigate_to("library"); }
+                }
+
+                // 细分隔线
+                Rectangle {
+                    height: 1px;
+                    background: Theme.outline_variant;
+                }
+
+                // 我的歌单
+                if !NavState.sidebar_collapsed: HorizontalLayout {
+                    height: 38px;
+                    padding-left: 12px;
+                    padding-right: 4px;
+                    alignment: space-between;
+
+                    HorizontalLayout {
+                        spacing: 4px;
+                        Text {
+                            text: "我的歌单";
+                            color: Theme.text_muted;
+                            font-size: 13px;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                        }
+
+                        Image {
+                            width: 14px;
+                            height: 14px;
+                            source: @image-url("../assets/icons/chevron_down.svg");
+                            colorize: Theme.text_muted;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    Rectangle {
+                        width: 26px;
+                        height: 26px;
+                        border-radius: Theme.radius_full;
+                        background: add_pl_touch.has_hover ? Theme.surface_hover : transparent;
+                        y: (parent.height - self.height) / 2;
+
+                        add_pl_touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                LibraryActions.create_new_playlist();
+                            }
+                        }
+
+                        Image {
+                            width: 14px;
+                            height: 14px;
+                            source: @image-url("../assets/icons/plus.svg");
+                            colorize: Theme.text_muted;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+                }
+
+                if !NavState.sidebar_collapsed: VerticalLayout {
+                    spacing: 2px;
+                    for pl in PageDataState.user_playlists: Rectangle {
+                        height: 36px;
+                        border-radius: Theme.radius_md;
+                        background: pl_touch.has_hover ? Theme.surface_hover : transparent;
+                        transform-scale: pl_touch.pressed ? 0.98 : 1.0;
+                        animate background, transform-scale { duration: 150ms; }
+
+                        pl_touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { NavActions.open_playlist_detail(pl.id); }
+                        }
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+                            spacing: 10px;
+                            alignment: start;
+
+                            Image {
+                                width: 15px;
+                                height: 15px;
+                                source: @image-url("../assets/icons/playlist.svg");
+                                colorize: Theme.text_muted;
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            Text {
+                                text: pl.title;
+                                color: pl_touch.has_hover ? Theme.text_primary : Theme.text_secondary;
+                                font-size: 13px;
+                                overflow: elide;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

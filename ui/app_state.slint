@@ -1,0 +1,189 @@
+import {
+    LyricLineUi,
+    TrackUi,
+    PlaylistUi,
+    CommentUi,
+    DownloadTaskUi,
+} from "types.slint";
+
+/// 播放器全局响应式状态
+export global PlayerState {
+    in-out property <bool> is_playing: false;
+    in-out property <bool> is_loading: false;
+    in-out property <string> track_id: "";
+    in-out property <string> track_title: "等待播放";
+    in-out property <string> track_artists: "网易云音乐";
+    in-out property <string> track_album: "";
+    in-out property <string> track_cover: "";
+    in-out property <image> track_cover_image;
+    in-out property <bool> has_track_cover: false;
+    in-out property <bool> track_is_liked: false;
+    in-out property <string> quality_badge: "SQ";
+    in-out property <int> position_ms: 0;
+    in-out property <int> duration_ms: 0;
+    in-out property <string> position_text: "00:00";
+    in-out property <string> duration_text: "00:00";
+    in-out property <float> progress_ratio: 0.0;
+    in-out property <float> volume: 0.8;
+    in-out property <bool> is_muted: false;
+    in-out property <string> play_mode: "sequence"; // sequence, loop, single, shuffle
+    in-out property <bool> is_lyric_expanded: false;
+    in-out property <bool> is_queue_open: false;
+    in-out property <bool> is_comment_open: false;
+    in-out property <[TrackUi]> queue_tracks: [];
+    in-out property <int> queue_count: 0;
+}
+
+/// 页面导航全局状态
+export global NavState {
+    in-out property <string> current_page: "home"; // home, daily, liked, playlist, library, search, settings, artist
+    in-out property <string> search_keyword: "";
+    in-out property <bool> can_go_back: false;
+    in-out property <bool> can_go_forward: false;
+    in-out property <bool> sidebar_collapsed: false;
+}
+
+/// 账号与认证全局状态
+export global AuthState {
+    in-out property <bool> is_logged_in: false;
+    in-out property <string> nickname: "立即登录";
+    in-out property <string> avatar_url: "";
+    in-out property <int> vip_level: 0;
+    in-out property <bool> is_login_dialog_open: false;
+    in-out property <string> qr_status_text: "请使用网易云音乐 App 扫码登录";
+    in-out property <image> qr_code_image;
+}
+
+/// 歌词同步全局状态
+export global LyricState {
+    in-out property <[LyricLineUi]> lines: [];
+    in-out property <int> active_index: -1;
+    in-out property <float> word_progress: 0.0;
+    in-out property <bool> has_lyrics: false;
+    in-out property <bool> is_interlude: false;
+    in-out property <int> interlude_dots: 3;
+}
+
+/// 主题与色彩自适应全局状态
+export global ThemeState {
+    in-out property <bool> dynamic_color_enabled: false;
+    in-out property <string> custom_color_hex: "#fe7971";
+    in-out property <bool> is_equalizer_open: false;
+    in-out property <bool> is_settings_open: false;
+}
+
+/// 页面业务数据全局状态
+export global PageDataState {
+    // 发现页推荐
+    in-out property <[PlaylistUi]> home_recommend_playlists: [];
+    in-out property <[PlaylistUi]> home_recommend_row1: [];
+    in-out property <[PlaylistUi]> home_recommend_row2: [];
+    in-out property <[TrackUi]> home_recommend_songs: [];
+    in-out property <[TrackUi]> continue_listening_tracks: [];
+
+    // 用户听歌行为统计与问候语
+    in-out property <string> greeting_text: "下午好";
+    in-out property <string> weekly_listen_hours: "0.0";
+    in-out property <int> total_listen_count: 0;
+    in-out property <int> streak_days: 0;
+    in-out property <int> total_favorites: 0;
+    in-out property <string> weekly_growth_str: "0.0%";
+    in-out property <string> favorite_ratio_str: "0.0%";
+
+    // 每日推荐页
+    in-out property <[TrackUi]> daily_songs: [];
+    in-out property <string> daily_date_day: "--";
+    in-out property <string> daily_date_month: "--月";
+    in-out property <string> daily_date_weekday: "--";
+
+    // 我喜欢的音乐
+    in-out property <[TrackUi]> liked_songs: [];
+
+    // 歌单详情页
+    in-out property <image> current_playlist_cover_image;
+    in-out property <bool> has_playlist_cover: false;
+    in-out property <PlaylistUi> current_playlist: {
+        id: "",
+        title: "",
+        cover_url: "",
+        track_count: 0,
+        play_count_str: "",
+        creator_name: "",
+        description: "",
+    };
+    in-out property <[TrackUi]> playlist_tracks: [];
+
+    // 歌手详情页
+    in-out property <string> artist_name: "";
+    in-out property <string> artist_avatar: "";
+    in-out property <string> artist_desc: "";
+    in-out property <[TrackUi]> artist_hot_songs: [];
+    in-out property <[PlaylistUi]> artist_albums: [];
+
+    // 评论弹窗
+    in-out property <[CommentUi]> current_comments: [];
+
+    // 本地音乐与下载管理
+    in-out property <string> library_tab: "local"; // local, download
+    in-out property <[TrackUi]> library_tracks: [];
+    in-out property <bool> library_is_scanning: false;
+    in-out property <string> library_scan_progress: "就绪";
+    in-out property <[DownloadTaskUi]> download_tasks: [];
+
+    // 搜索中心
+    in-out property <[TrackUi]> search_songs: [];
+    in-out property <[PlaylistUi]> search_playlists: [];
+    in-out property <[PlaylistUi]> search_playlists_row1: [];
+    in-out property <[PlaylistUi]> search_playlists_row2: [];
+    in-out property <[string]> hot_keywords: [];
+    in-out property <string> search_tab: "songs"; // songs, playlists
+
+    // 用户自建/收藏歌单
+    in-out property <[PlaylistUi]> user_playlists: [];
+
+    // 频谱柱状高低值 (0.0 .. 1.0)
+    in-out property <[float]> visualizer_bars: [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+    ];
+
+    // 均衡器各频段增益 (-12.0 .. +12.0 dB)
+    in-out property <[float]> eq_gains: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+    in-out property <string> eq_preset_name: "平直 (Flat)";
+}
+
+/// Toast 提示通知状态
+export global ToastState {
+    in-out property <bool> is_open: false;
+    in-out property <string> text: "";
+}

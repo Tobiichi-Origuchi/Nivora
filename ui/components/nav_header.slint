@@ -1,0 +1,215 @@
+import { Theme } from "../theme.slint";
+import { NavState, AuthState, ThemeState } from "../app_state.slint";
+import {
+    NavActions,
+    ThemeActions,
+    AuthActions,
+    WindowActions,
+} from "../app_actions.slint";
+import { SButton } from "../widgets/s_button.slint";
+import { SSearchInput } from "../widgets/s_search_input.slint";
+
+export component NavHeader inherits Rectangle {
+    height: Theme.header_height;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.outline_variant;
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 12px;
+        alignment: space-between;
+
+        // 左侧导航操作与搜索栏
+        Rectangle {
+            height: 40px;
+            y: (parent.height - self.height) / 2;
+            width: left_cluster.preferred-width;
+
+            left_cluster := HorizontalLayout {
+                spacing: 8px;
+                alignment: start;
+
+                // 后退按钮
+                SButton {
+                    btn_height: 40px;
+                    circle: true;
+                    variant: "tertiary";
+                    has_icon: true;
+                    icon: @image-url("../assets/icons/chevron_left.svg");
+                    icon_size: 20px;
+                    disabled: !NavState.can_go_back;
+                    clicked => { NavActions.go_back(); }
+                }
+
+                // 前进按钮
+                SButton {
+                    btn_height: 40px;
+                    circle: true;
+                    variant: "tertiary";
+                    has_icon: true;
+                    icon: @image-url("../assets/icons/chevron_right.svg");
+                    icon_size: 20px;
+                    disabled: !NavState.can_go_forward;
+                    clicked => { NavActions.go_forward(); }
+                }
+
+                // 搜索胶囊框
+                SSearchInput {
+                    text <=> NavState.search_keyword;
+                    input_width: 260px;
+                    input_height: 40px;
+                    placeholder: "搜索音乐、歌手、歌词...";
+                    search_submitted(kw) => {
+                        if kw != "" {
+                            NavActions.trigger_search(kw);
+                        }
+                    }
+                    text_changed(kw) => {
+                        NavState.search_keyword = kw;
+                    }
+                    cleared => {
+                        NavState.search_keyword = "";
+                    }
+                }
+            }
+        }
+
+        // 中间弹性占位
+        Rectangle {
+            horizontal-stretch: 1;
+        }
+
+        // 右侧操作按钮区
+        Rectangle {
+            height: 40px;
+            y: (parent.height - self.height) / 2;
+            width: right_cluster.preferred-width;
+
+            right_cluster := HorizontalLayout {
+                spacing: 8px;
+                alignment: end;
+
+                // 用户头像 / 登录胶囊
+                if AuthState.is_logged_in: Rectangle {
+                    height: 40px;
+                    width: user_logged_in_layout.preferred-width;
+                    border-radius: Theme.radius_full;
+                    background: user_touch.has_hover ? Theme.surface_hover : transparent;
+                    transform-scale: user_touch.pressed ? 0.96 : 1.0;
+                    animate background, transform-scale { duration: 150ms; }
+
+                    user_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            AuthActions.logout();
+                        }
+                    }
+
+                    user_logged_in_layout := HorizontalLayout {
+                        padding-left: 5px;
+                        padding-right: 12px;
+                        spacing: 8px;
+
+                        // 头像圆点
+                        Rectangle {
+                            width: 30px;
+                            height: 30px;
+                            border-radius: Theme.radius_full;
+                            background: Theme.primary_container;
+                            y: (parent.height - self.height) / 2;
+                            clip: true;
+
+                            Image {
+                                width: 16px;
+                                height: 16px;
+                                source: @image-url("../assets/icons/user.svg");
+                                colorize: Theme.primary;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                            }
+                        }
+
+                        Text {
+                            text: AuthState.nickname;
+                            color: Theme.text_primary;
+                            font-size: 13px;
+                            font-weight: 500;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                if !AuthState.is_logged_in: SButton {
+                    btn_height: 40px;
+                    circle: true;
+                    variant: "tertiary";
+                    has_icon: true;
+                    icon: @image-url("../assets/icons/user.svg");
+                    icon_size: 20px;
+                    clicked => {
+                        AuthState.is_login_dialog_open = true;
+                        AuthActions.open_login();
+                    }
+                }
+
+                // 全局设置齿轮按钮
+                SButton {
+                    btn_height: 40px;
+                    circle: true;
+                    variant: ThemeState.is_settings_open ? "secondary" : "tertiary";
+                    has_icon: true;
+                    icon: @image-url("../assets/icons/settings.svg");
+                    icon_size: 20px;
+                    clicked => {
+                        if ThemeState.is_settings_open {
+                            ThemeActions.close_settings();
+                        } else {
+                            ThemeActions.open_settings();
+                        }
+                    }
+                }
+
+                // 竖向细分割线
+                Rectangle {
+                    width: 1px;
+                    height: 18px;
+                    background: Theme.outline_variant;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                // 窗口控制按钮: 最小化 / 最大化 / 关闭
+                SButton {
+                    btn_height: 40px;
+                    circle: true;
+                    variant: "tertiary";
+                    has_icon: true;
+                    icon: @image-url("../assets/icons/minus.svg");
+                    icon_size: 16px;
+                    clicked => { WindowActions.minimize(); }
+                }
+
+                SButton {
+                    btn_height: 40px;
+                    circle: true;
+                    variant: "tertiary";
+                    has_icon: true;
+                    icon: @image-url("../assets/icons/square.svg");
+                    icon_size: 16px;
+                    clicked => { WindowActions.toggle_maximize(); }
+                }
+
+                SButton {
+                    btn_height: 40px;
+                    circle: true;
+                    variant: "tertiary";
+                    has_icon: true;
+                    icon: @image-url("../assets/icons/close.svg");
+                    icon_size: 16px;
+                    clicked => { WindowActions.close(); }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,359 @@
+import { Theme } from "../theme.slint";
+import { PageDataState, ThemeState } from "../app_state.slint";
+import { ThemeActions } from "../app_actions.slint";
+import { SButton } from "../widgets/s_button.slint";
+
+export component EqualizerDialog inherits Rectangle {
+    in property <bool> is_open: false;
+
+    opacity: root.is_open ? 1.0 : 0.0;
+    visible: self.opacity > 0.01;
+
+    animate opacity {
+        duration: root.is_open ? 200ms : 150ms;
+        easing: root.is_open ? ease-out : ease-in;
+    }
+
+    background: Theme.scrim;
+
+    TouchArea {
+        clicked => {
+            ThemeActions.close_equalizer();
+        }
+    }
+
+    dialog_card := Rectangle {
+        width: 620px;
+        height: 460px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: Theme.radius_2xl;
+        background: Theme.surface_elevated;
+        border-width: 1px;
+        border-color: Theme.glass_border_bright;
+        drop-shadow-blur: 40px;
+        drop-shadow-offset-y: 12px;
+        drop-shadow-color: Theme.shadow_elevated;
+
+        transform-scale: root.is_open ? 1.0 : 0.96;
+        animate transform-scale {
+            duration: root.is_open ? 200ms : 150ms;
+            easing: root.is_open ? cubic-bezier(0.16, 1, 0.3, 1) : ease-in;
+        }
+
+        TouchArea { }
+
+        VerticalLayout {
+            padding: 28px;
+            spacing: 20px;
+
+            // 头部
+            HorizontalLayout {
+                height: 36px;
+                alignment: space-between;
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: start;
+                    Text {
+                        text: "均衡器";
+                        color: Theme.text_primary;
+                        font-size: 20px;
+                        font-weight: 800;
+                        vertical-alignment: center;
+                    }
+
+                    Rectangle {
+                        height: 24px;
+                        border-radius: Theme.radius_full;
+                        background: Theme.primary_container;
+                        border-width: 1px;
+                        border-color: Theme.primary.with_alpha(30%);
+                        y: (parent.height - self.height) / 2;
+
+                        HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 10px;
+                            alignment: center;
+                            Text {
+                                text: PageDataState.eq_preset_name;
+                                color: Theme.primary;
+                                font-size: 11px;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: Theme.radius_full;
+                    background: close_touch.has_hover ? Theme.surface_hover : Theme.surface_container;
+                    border-width: 1px;
+                    border-color: Theme.glass_border;
+                    transform-scale: close_touch.pressed ? 0.92 : (close_touch.has_hover ? 1.05 : 1.0);
+
+                    animate transform-scale, background {
+                        duration: 150ms;
+                        easing: cubic-bezier(0.16, 1, 0.3, 1);
+                    }
+
+                    close_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { ThemeActions.close_equalizer(); }
+                    }
+
+                    Image {
+                        width: 14px;
+                        height: 14px;
+                        source: @image-url("../assets/icons/close.svg");
+                        colorize: close_touch.has_hover ? Theme.text_primary : Theme.text_muted;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+            }
+
+            // 预设选择胶囊栏
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: start;
+
+                // 平直
+                Rectangle {
+                    height: 30px;
+                    border-radius: Theme.radius_full;
+                    background: PageDataState.eq_preset_name == "平直 (Flat)" ? Theme.primary : Theme.surface_container;
+                    border-width: 1px;
+                    border-color: PageDataState.eq_preset_name == "平直 (Flat)" ? Theme.primary : Theme.glass_border;
+                    transform-scale: p1_touch.pressed ? 0.94 : (p1_touch.has_hover ? 1.03 : 1.0);
+
+                    animate transform-scale, background { duration: 150ms; }
+
+                    p1_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { ThemeActions.set_eq_preset("平直 (Flat)"); }
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 14px;
+                        padding-right: 14px;
+                        alignment: center;
+                        Text {
+                            text: "平直";
+                            color: PageDataState.eq_preset_name == "平直 (Flat)" ? Theme.on_primary : Theme.text_secondary;
+                            font-size: 12px;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // 流行
+                Rectangle {
+                    height: 30px;
+                    border-radius: Theme.radius_full;
+                    background: PageDataState.eq_preset_name == "流行 (Pop)" ? Theme.primary : Theme.surface_container;
+                    border-width: 1px;
+                    border-color: PageDataState.eq_preset_name == "流行 (Pop)" ? Theme.primary : Theme.glass_border;
+                    transform-scale: p2_touch.pressed ? 0.94 : (p2_touch.has_hover ? 1.03 : 1.0);
+
+                    animate transform-scale, background { duration: 150ms; }
+
+                    p2_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { ThemeActions.set_eq_preset("流行 (Pop)"); }
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 14px;
+                        padding-right: 14px;
+                        alignment: center;
+                        Text {
+                            text: "流行";
+                            color: PageDataState.eq_preset_name == "流行 (Pop)" ? Theme.on_primary : Theme.text_secondary;
+                            font-size: 12px;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // 摇滚
+                Rectangle {
+                    height: 30px;
+                    border-radius: Theme.radius_full;
+                    background: PageDataState.eq_preset_name == "摇滚 (Rock)" ? Theme.primary : Theme.surface_container;
+                    border-width: 1px;
+                    border-color: PageDataState.eq_preset_name == "摇滚 (Rock)" ? Theme.primary : Theme.glass_border;
+                    transform-scale: p3_touch.pressed ? 0.94 : (p3_touch.has_hover ? 1.03 : 1.0);
+
+                    animate transform-scale, background { duration: 150ms; }
+
+                    p3_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { ThemeActions.set_eq_preset("摇滚 (Rock)"); }
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 14px;
+                        padding-right: 14px;
+                        alignment: center;
+                        Text {
+                            text: "摇滚";
+                            color: PageDataState.eq_preset_name == "摇滚 (Rock)" ? Theme.on_primary : Theme.text_secondary;
+                            font-size: 12px;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // 人声
+                Rectangle {
+                    height: 30px;
+                    border-radius: Theme.radius_full;
+                    background: PageDataState.eq_preset_name == "人声 (Vocal)" ? Theme.primary : Theme.surface_container;
+                    border-width: 1px;
+                    border-color: PageDataState.eq_preset_name == "人声 (Vocal)" ? Theme.primary : Theme.glass_border;
+                    transform-scale: p4_touch.pressed ? 0.94 : (p4_touch.has_hover ? 1.03 : 1.0);
+
+                    animate transform-scale, background { duration: 150ms; }
+
+                    p4_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { ThemeActions.set_eq_preset("人声 (Vocal)"); }
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 14px;
+                        padding-right: 14px;
+                        alignment: center;
+                        Text {
+                            text: "人声";
+                            color: PageDataState.eq_preset_name == "人声 (Vocal)" ? Theme.on_primary : Theme.text_secondary;
+                            font-size: 12px;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // 古典
+                Rectangle {
+                    height: 30px;
+                    border-radius: Theme.radius_full;
+                    background: PageDataState.eq_preset_name == "古典 (Classical)" ? Theme.primary : Theme.surface_container;
+                    border-width: 1px;
+                    border-color: PageDataState.eq_preset_name == "古典 (Classical)" ? Theme.primary : Theme.glass_border;
+                    transform-scale: p5_touch.pressed ? 0.94 : (p5_touch.has_hover ? 1.03 : 1.0);
+
+                    animate transform-scale, background { duration: 150ms; }
+
+                    p5_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { ThemeActions.set_eq_preset("古典 (Classical)"); }
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 14px;
+                        padding-right: 14px;
+                        alignment: center;
+                        Text {
+                            text: "古典";
+                            color: PageDataState.eq_preset_name == "古典 (Classical)" ? Theme.on_primary : Theme.text_secondary;
+                            font-size: 12px;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+
+            // 10 频段垂直滑块区
+            Rectangle {
+                vertical-stretch: 1;
+                background: Theme.surface_container;
+                border-radius: Theme.radius_xl;
+                border-width: 1px;
+                border-color: Theme.glass_border;
+
+                HorizontalLayout {
+                    padding: 18px;
+                    spacing: 14px;
+                    alignment: space-around;
+
+                    // 10 个频段展示
+                    for gain[idx] in PageDataState.eq_gains: VerticalLayout {
+                        spacing: 8px;
+                        alignment: center;
+
+                        // 增益数值文本 (+3dB / -2dB)
+                        Text {
+                            text: (gain > 0.0 ? "+\{Math.round(gain)}" : "\{Math.round(gain)}") + "dB";
+                            color: gain != 0.0 ? Theme.primary : Theme.text_muted;
+                            font-size: 11px;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                        }
+
+                        // 垂直滑槽
+                        Rectangle {
+                            width: 6px;
+                            height: 160px;
+                            border-radius: Theme.radius_full;
+                            background: Theme.surface_variant;
+
+                            slider_touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    ThemeActions.set_eq_gain(idx, ((1.0 - (self.mouse-y / self.height)) * 24.0) - 12.0);
+                                }
+                                moved => {
+                                    if self.pressed {
+                                        ThemeActions.set_eq_gain(idx, ((1.0 - (self.mouse-y / self.height)) * 24.0) - 12.0);
+                                    }
+                                }
+                            }
+
+                            // 0dB 中心水平刻度线
+                            Rectangle {
+                                width: 14px;
+                                height: 1px;
+                                x: -4px;
+                                y: parent.height / 2;
+                                background: Theme.outline;
+                            }
+
+                            // 拖动滑块旋钮
+                            Rectangle {
+                                width: 18px;
+                                height: 18px;
+                                x: (parent.width - self.width) / 2;
+                                y: (1.0 - ((gain + 12.0) / 24.0)) * (parent.height - self.height);
+                                border-radius: Theme.radius_full;
+                                background: Theme.primary;
+                                border-width: 2px;
+                                border-color: #ffffff;
+                                drop-shadow-blur: 8px;
+                                drop-shadow-color: Theme.primary.with_alpha(50%);
+                            }
+                        }
+
+                        // 频率标识文本 (31Hz .. 16kHz)
+                        Text {
+                            text: idx == 0 ? "31Hz" : (idx == 1 ? "62Hz" : (idx == 2 ? "125" : (idx == 3 ? "250" : (idx == 4 ? "500" : (idx == 5 ? "1k" : (idx == 6 ? "2k" : (idx == 7 ? "4k" : (idx == 8 ? "8k" : "16k"))))))));
+                            color: Theme.text_muted;
+                            font-size: 11px;
+                            font-weight: 500;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,434 @@
+import { Theme } from "../theme.slint";
+import { PageDataState } from "../app_state.slint";
+import { LibraryActions, PlayerActions } from "../app_actions.slint";
+import { TrackTable } from "../components/track_table.slint";
+import { SEmptyState } from "../widgets/s_empty_state.slint";
+
+export component LibraryView inherits Rectangle {
+    VerticalLayout {
+        padding-left: 24px;
+        padding-right: 24px;
+        padding-top: 20px;
+        padding-bottom: 16px;
+        spacing: 16px;
+
+        // Tab 切换头 (本地音乐 / 下载管理)
+        HorizontalLayout {
+            spacing: 12px;
+            alignment: start;
+
+            // 本地音乐 Tab
+            Rectangle {
+                height: 38px;
+                border-radius: Theme.radius_full;
+                background: PageDataState.library_tab == "local" ? Theme.primary_container : (local_tab_touch.has_hover ? Theme.surface_hover : transparent);
+                animate background { duration: 150ms; }
+                local_tab_touch := TouchArea {
+                    clicked => {
+                        LibraryActions.switch_library_tab("local");
+                    }
+                }
+
+                HorizontalLayout {
+                    padding-left: 18px;
+                    padding-right: 18px;
+                    alignment: center;
+                    Text {
+                        text: "本地音乐 (" + PageDataState.library_tracks.length + ")";
+                        color: PageDataState.library_tab == "local" ? Theme.primary : Theme.text_secondary;
+                        font-size: 14px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            // 下载管理 Tab
+            Rectangle {
+                height: 38px;
+                border-radius: Theme.radius_full;
+                background: PageDataState.library_tab == "download" ? Theme.primary_container : (dl_tab_touch.has_hover ? Theme.surface_hover : transparent);
+                animate background { duration: 150ms; }
+                dl_tab_touch := TouchArea {
+                    clicked => {
+                        LibraryActions.switch_library_tab("download");
+                    }
+                }
+
+                HorizontalLayout {
+                    padding-left: 18px;
+                    padding-right: 18px;
+                    alignment: center;
+                    Text {
+                        text: "下载管理 (" + PageDataState.download_tasks.length + ")";
+                        color: PageDataState.library_tab == "download" ? Theme.primary : Theme.text_secondary;
+                        font-size: 14px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        // 分割线
+        Rectangle {
+            height: 1px;
+            background: Theme.border_subtle;
+        }
+
+        // 本地音乐
+        if PageDataState.library_tab == "local": VerticalLayout {
+            vertical-stretch: 1;
+            spacing: 20px;
+
+            // 顶栏：本地音乐库统计与扫描操作
+            HorizontalLayout {
+                spacing: 24px;
+                alignment: start;
+
+                // 本地图标磁贴
+                Rectangle {
+                    width: 100px;
+                    height: 100px;
+                    border-radius: Theme.radius_lg;
+                    background: @linear-gradient(135deg, #10b981 0%, #059669 100%);
+
+                    Image {
+                        width: 44px;
+                        height: 44px;
+                        source: @image-url("../assets/icons/folder.svg");
+                        colorize: #ffffff;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+
+                // 说明与扫描操作
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 8px;
+
+                    Text {
+                        text: "本地音乐库";
+                        color: Theme.text_primary;
+                        font-size: 24px;
+                        font-weight: 800;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        alignment: start;
+
+                        // 扫描文件夹按钮
+                        Rectangle {
+                            height: 36px;
+                            border-radius: Theme.radius_full;
+                            background: Theme.primary;
+
+                            scan_touch := TouchArea {
+                                clicked => {
+                                    LibraryActions.scan_local_folder();
+                                }
+                            }
+
+                            HorizontalLayout {
+                                padding-left: 16px;
+                                padding-right: 16px;
+                                alignment: center;
+                                spacing: 8px;
+
+                                Image {
+                                    width: 14px;
+                                    height: 14px;
+                                    source: @image-url("../assets/icons/folder.svg");
+                                    colorize: Theme.on_primary;
+                                    y: (parent.height - self.height) / 2;
+                                }
+
+                                Text {
+                                    text: PageDataState.library_is_scanning ? "正在扫描中..." : "扫描本地目录";
+                                    color: Theme.on_primary;
+                                    font-size: 13px;
+                                    font-weight: 700;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+
+                        // 状态说明
+                        Text {
+                            text: PageDataState.library_scan_progress;
+                            color: Theme.text_secondary;
+                            font-size: 13px;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+
+            // 本地曲目列表
+            if PageDataState.library_tracks.length > 0: TrackTable {
+                vertical-stretch: 1;
+                tracks: PageDataState.library_tracks;
+                list_id: "library";
+            }
+
+            if PageDataState.library_tracks.length == 0: SEmptyState {
+                vertical-stretch: 1;
+                icon: @image-url("../assets/icons/folder.svg");
+                title: "本地曲库暂无音乐";
+                description: "点击下方按钮或右上角扫描本地音乐文件夹";
+                button_text: "扫描本地目录";
+                button_type: "primary";
+                button_variant: "secondary";
+                button_clicked => { LibraryActions.scan_local_folder(); }
+            }
+        }
+
+        // 下载管理
+        if PageDataState.library_tab == "download": Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                spacing: 16px;
+
+                // 下载管理操作栏
+            HorizontalLayout {
+                    alignment: space-between;
+
+                    Text {
+                        text: "离线下载任务 (" + PageDataState.download_tasks.length + ")";
+                        color: Theme.text_primary;
+                        font-size: 20px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                    }
+
+                    // 打开下载文件夹按钮
+                Rectangle {
+                        height: 36px;
+                        border-radius: Theme.radius_full;
+                        background: open_folder_touch.has_hover ? Theme.surface_hover : Theme.surface_panel;
+                        border-width: 1px;
+                        border-color: Theme.border_subtle;
+                        animate background { duration: 150ms; }
+
+                        open_folder_touch := TouchArea {
+                            clicked => {
+                                LibraryActions.open_download_folder();
+                            }
+                        }
+
+                        HorizontalLayout {
+                            padding-left: 16px;
+                            padding-right: 16px;
+                            spacing: 8px;
+                            alignment: center;
+
+                            Image {
+                                width: 14px;
+                                height: 14px;
+                                source: @image-url("../assets/icons/folder.svg");
+                                colorize: open_folder_touch.has_hover ? Theme.text_primary : Theme.text_secondary;
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            Text {
+                                text: "打开下载目录";
+                                color: open_folder_touch.has_hover ? Theme.text_primary : Theme.text_secondary;
+                                font-size: 13px;
+                                font-weight: 600;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                // 下载任务表头
+            Rectangle {
+                    height: 36px;
+                    border-radius: Theme.radius_sm;
+                    background: Theme.surface_container.with_alpha(40%);
+
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        spacing: 12px;
+
+                        Rectangle {
+                            horizontal-stretch: 3;
+                            Text {
+                                text: "歌曲名称";
+                                color: Theme.text_muted;
+                                font-size: 12px;
+                                font-weight: 600;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        Rectangle {
+                            horizontal-stretch: 2;
+                            Text {
+                                text: "歌手";
+                                color: Theme.text_muted;
+                                font-size: 12px;
+                                font-weight: 600;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        Rectangle {
+                            width: 60px;
+                            Text {
+                                text: "音质";
+                                color: Theme.text_muted;
+                                font-size: 12px;
+                                font-weight: 600;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        Rectangle {
+                            width: 120px;
+                            Text {
+                                text: "进度";
+                                color: Theme.text_muted;
+                                font-size: 12px;
+                                font-weight: 600;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        Rectangle {
+                            width: 120px;
+                            Text {
+                                text: "大小 / 状态";
+                                color: Theme.text_muted;
+                                font-size: 12px;
+                                font-weight: 600;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                // 下载任务循环项
+            for task[idx] in PageDataState.download_tasks: Rectangle {
+                    height: 52px;
+                    border-radius: Theme.radius_sm;
+                    background: task_row_touch.has_hover ? Theme.surface_hover : transparent;
+                    animate background { duration: 150ms; }
+
+                    task_row_touch := TouchArea { }
+
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        spacing: 12px;
+
+                        // 歌曲名称
+                    Rectangle {
+                            horizontal-stretch: 3;
+                            Text {
+                                text: task.title;
+                                color: Theme.text_primary;
+                                font-size: 14px;
+                                font-weight: 600;
+                                overflow: elide;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        // 歌手
+                    Rectangle {
+                            horizontal-stretch: 2;
+                            Text {
+                                text: task.artist;
+                                color: Theme.text_secondary;
+                                font-size: 13px;
+                                overflow: elide;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        // 音质
+                    Rectangle {
+                            width: 60px;
+                            Rectangle {
+                                height: 20px;
+                                width: 50px;
+                                y: (parent.height - self.height) / 2;
+                                x: (parent.width - self.width) / 2;
+                                border-radius: Theme.radius_xs;
+                                background: Theme.primary_container;
+                                Text {
+                                    text: task.quality;
+                                    color: Theme.primary;
+                                    font-size: 10px;
+                                    font-weight: 700;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+
+                        // 进度条
+                    Rectangle {
+                            width: 120px;
+                            Rectangle {
+                                height: 6px;
+                                width: 100%;
+                                y: (parent.height - self.height) / 2;
+                                border-radius: 3px;
+                                background: Theme.surface_container;
+
+                                Rectangle {
+                                    x: 0px;
+                                    y: 0px;
+                                    height: 100%;
+                                    width: parent.width * clamp(task.progress, 0.0, 1.0);
+                                    border-radius: 3px;
+                                    background: task.status == "completed" ? #10b981 : (task.status == "failed" ? #ef4444 : Theme.primary);
+                                }
+                            }
+                        }
+
+                        // 大小与状态
+                    Rectangle {
+                            width: 120px;
+                            VerticalLayout {
+                                alignment: center;
+                                spacing: 2px;
+                                Text {
+                                    text: task.status == "completed" ? "已完成" : (task.status == "downloading" ? "下载中" : (task.status == "failed" ? "失败" : "等待中"));
+                                    color: task.status == "completed" ? #10b981 : (task.status == "failed" ? #ef4444 : Theme.text_primary);
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    horizontal-alignment: center;
+                                }
+
+                                Text {
+                                    text: task.size_str;
+                                    color: Theme.text_muted;
+                                    font-size: 10px;
+                                    horizontal-alignment: center;
+                                    overflow: elide;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if PageDataState.download_tasks.length == 0: SEmptyState {
+                    height: 240px;
+                    icon: @image-url("../assets/icons/download.svg");
+                    title: "暂无离线下载任务";
+                    description: "在歌曲列表中点击下载按钮即可离线保存音频";
+                }
+            }
+        }
+    }
+}

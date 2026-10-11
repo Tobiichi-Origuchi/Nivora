@@ -1,0 +1,485 @@
+import { Theme } from "../theme.slint";
+import { PlayerState } from "../app_state.slint";
+import { PlayerActions, ThemeActions } from "../app_actions.slint";
+import { SSlider } from "../widgets/s_slider.slint";
+import { SIconSwap } from "../widgets/s_icon_swap.slint";
+import { SButton } from "../widgets/s_button.slint";
+
+export component PlayerBar inherits Rectangle {
+    height: Theme.player_bar_height;
+    background: Theme.surface_panel;
+    border-width: 1px;
+    border-color: Theme.glass_border;
+    clip: false;
+
+    // 贴顶整宽微动进度滑块
+    Rectangle {
+        y: -9px;
+        x: 0px;
+        width: 100%;
+        height: 18px;
+        z: 30;
+
+        SSlider {
+            x: 0;
+            y: 0;
+            width: 100%;
+            height: 100%;
+            track_height: 3px;
+            hover_track_height: 5px;
+            thumb_size: 12px;
+            value: PlayerState.progress_ratio;
+            drag_ended(val) => {
+                PlayerActions.seek(val);
+            }
+        }
+    }
+
+    // 主操作区
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 16px;
+        alignment: space-between;
+
+        // 左侧：曲目信息
+        Rectangle {
+            horizontal-stretch: 1;
+            min-width: 240px;
+
+            HorizontalLayout {
+                spacing: 12px;
+                alignment: start;
+
+                // 封面卡片
+                Rectangle {
+                    width: 54px;
+                    height: 54px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: Theme.radius_md;
+                    clip: true;
+                    background: Theme.surface_container;
+
+                    if PlayerState.has_track_cover: Image {
+                        width: 100%;
+                        height: 100%;
+                        source: PlayerState.track_cover_image;
+                        image-fit: cover;
+                    }
+                    if !PlayerState.has_track_cover: Image {
+                        width: 24px;
+                        height: 24px;
+                        source: @image-url("../assets/icons/music.svg");
+                        colorize: Theme.text_muted;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    // 悬浮遮罩与上拉全屏箭头
+                    Rectangle {
+                        width: 100%;
+                        height: 100%;
+                        background: #000000.with_alpha(cover_touch.has_hover ? 40% : 0%);
+                        animate background { duration: 180ms; }
+
+                        cover_touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                PlayerActions.toggle_lyric_view();
+                            }
+                        }
+
+                        Image {
+                            width: 22px;
+                            height: 22px;
+                            source: @image-url("../assets/icons/chevron_up.svg");
+                            colorize: #ffffff;
+                            opacity: cover_touch.has_hover ? 1.0 : 0.0;
+                            animate opacity { duration: 180ms; }
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+                }
+
+                // 标题、红心、更多操作与歌手
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 4px;
+                    horizontal-stretch: 1;
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: start;
+
+                        Text {
+                            text: PlayerState.track_title != "" ? PlayerState.track_title : "等待播放";
+                            color: Theme.text_primary;
+                            font-size: 15px;
+                            font-weight: 700;
+                            overflow: elide;
+                            vertical-alignment: center;
+                        }
+
+                        // 喜爱心形微交互按键
+                        Rectangle {
+                            width: 28px;
+                            height: 28px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: Theme.radius_full;
+                            background: like_touch.has_hover ? Theme.surface_hover : transparent;
+                            transform-scale: like_touch.pressed ? 0.90 : 1.0;
+                            animate background, transform-scale { duration: 150ms; }
+
+                            like_touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    PlayerActions.toggle_track_like(PlayerState.track_id);
+                                }
+                            }
+
+                            SIconSwap {
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                                icon_on: @image-url("../assets/icons/heart_filled.svg");
+                                icon_off: @image-url("../assets/icons/heart.svg");
+                                active: PlayerState.track_is_liked;
+                                icon_size: 18px;
+                                colorize: PlayerState.track_is_liked ? #ec4141 : (like_touch.has_hover ? Theme.text_primary : Theme.text_muted);
+                            }
+                        }
+
+                        // 更多操作按钮
+                        Rectangle {
+                            width: 28px;
+                            height: 28px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: Theme.radius_full;
+                            background: more_touch.has_hover ? Theme.surface_hover : transparent;
+                            transform-scale: more_touch.pressed ? 0.90 : 1.0;
+                            animate background, transform-scale { duration: 150ms; }
+
+                            more_touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    PlayerActions.toggle_queue_drawer();
+                                }
+                            }
+
+                            Image {
+                                width: 16px;
+                                height: 16px;
+                                source: @image-url("../assets/icons/more_horizontal.svg");
+                                colorize: more_touch.has_hover ? Theme.text_primary : Theme.text_muted;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                            }
+                        }
+                    }
+
+                    Text {
+                        text: PlayerState.track_artists != "" ? PlayerState.track_artists : "网易云音乐";
+                        color: Theme.text_muted;
+                        font-size: 12.5px;
+                        overflow: elide;
+                    }
+                }
+            }
+        }
+
+        // 中间：按键
+        Rectangle {
+            horizontal-stretch: 0;
+            height: 44px;
+            y: (parent.height - self.height) / 2;
+            width: center_controls.preferred-width;
+
+            center_controls := HorizontalLayout {
+                spacing: 10px;
+                alignment: center;
+
+                // 随机 / 播放顺序
+                Rectangle {
+                    width: 38px;
+                    height: 38px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: Theme.radius_full;
+                    background: shuffle_touch.has_hover ? Theme.surface_hover : transparent;
+                    transform-scale: shuffle_touch.pressed ? 0.92 : 1.0;
+                    animate background, transform-scale { duration: 150ms; }
+
+                    shuffle_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            PlayerActions.toggle_play_mode();
+                        }
+                    }
+
+                    Image {
+                        width: 18px;
+                        height: 18px;
+                        source: (PlayerState.play_mode == "shuffle") ? @image-url("../assets/icons/shuffle.svg") : @image-url("../assets/icons/play_order.svg");
+                        colorize: (PlayerState.play_mode == "shuffle") ? Theme.primary : (shuffle_touch.has_hover ? Theme.text_primary : Theme.text_secondary);
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+
+                // 上一首
+                Rectangle {
+                    width: 38px;
+                    height: 38px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: Theme.radius_full;
+                    background: prev_touch.has_hover ? Theme.surface_hover : transparent;
+                    transform-scale: prev_touch.pressed ? 0.92 : 1.0;
+                    animate background, transform-scale { duration: 150ms; }
+
+                    prev_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { PlayerActions.prev_track(); }
+                    }
+
+                    Image {
+                        width: 18px;
+                        height: 18px;
+                        source: @image-url("../assets/icons/skip_prev.svg");
+                        colorize: prev_touch.has_hover ? Theme.text_primary : Theme.text_secondary;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+
+                // 播放 / 暂停
+                Rectangle {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: Theme.radius_full;
+                    background: Theme.on_surface.with_alpha(play_touch.has_hover ? 16% : 9%);
+                    transform-scale: play_touch.pressed ? 0.92 : (play_touch.has_hover ? 1.04 : 1.0);
+                    animate transform-scale, background {
+                        duration: 150ms;
+                        easing: cubic-bezier(0.16, 1, 0.3, 1);
+                    }
+
+                    play_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { PlayerActions.toggle_play(); }
+                    }
+
+                    SIconSwap {
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                        icon_on: @image-url("../assets/icons/pause.svg");
+                        icon_off: @image-url("../assets/icons/play.svg");
+                        active: PlayerState.is_playing;
+                        icon_size: 20px;
+                        colorize: Theme.text_primary;
+                    }
+                }
+
+                // 下一首
+                Rectangle {
+                    width: 38px;
+                    height: 38px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: Theme.radius_full;
+                    background: next_touch.has_hover ? Theme.surface_hover : transparent;
+                    transform-scale: next_touch.pressed ? 0.92 : 1.0;
+                    animate background, transform-scale { duration: 150ms; }
+
+                    next_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { PlayerActions.next_track(); }
+                    }
+
+                    Image {
+                        width: 18px;
+                        height: 18px;
+                        source: @image-url("../assets/icons/skip_next.svg");
+                        colorize: next_touch.has_hover ? Theme.text_primary : Theme.text_secondary;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+
+                // 循环模式
+                Rectangle {
+                    width: 38px;
+                    height: 38px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: Theme.radius_full;
+                    background: loop_touch.has_hover ? Theme.surface_hover : transparent;
+                    transform-scale: loop_touch.pressed ? 0.92 : 1.0;
+                    animate background, transform-scale { duration: 150ms; }
+
+                    loop_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { PlayerActions.toggle_play_mode(); }
+                    }
+
+                    Image {
+                        width: 18px;
+                        height: 18px;
+                        source: (PlayerState.play_mode == "single") ? @image-url("../assets/icons/repeat_one.svg") : @image-url("../assets/icons/repeat.svg");
+                        colorize: (PlayerState.play_mode != "sequence" && PlayerState.play_mode != "shuffle") ? Theme.primary : (loop_touch.has_hover ? Theme.text_primary : Theme.text_secondary);
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+            }
+        }
+
+        // 右侧：时间与工具栏
+        Rectangle {
+            horizontal-stretch: 1;
+            min-width: 240px;
+
+            Rectangle {
+                height: 34px;
+                y: (parent.height - self.height) / 2;
+                x: parent.width - self.width;
+                width: right_toolbar.preferred-width;
+
+                right_toolbar := HorizontalLayout {
+                    spacing: 12px;
+                    alignment: end;
+
+                    // 播放进度时间信息
+                    Text {
+                        text: PlayerState.position_text + " / " + PlayerState.duration_text;
+                        color: Theme.text_muted;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                    }
+
+                    // 音量快捷按键与控制
+                    Rectangle {
+                        width: 34px;
+                        height: 34px;
+                        border-radius: Theme.radius_full;
+                        background: vol_touch.has_hover ? Theme.surface_hover : transparent;
+                        transform-scale: vol_touch.pressed ? 0.92 : 1.0;
+                        animate background, transform-scale { duration: 150ms; }
+
+                        vol_touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                PlayerActions.toggle_mute();
+                            }
+                        }
+
+                        Image {
+                            width: 18px;
+                            height: 18px;
+                            source: PlayerState.volume <= 0.05 ? @image-url("../assets/icons/volume_mute.svg") : @image-url("../assets/icons/volume_up.svg");
+                            colorize: vol_touch.has_hover ? Theme.text_primary : Theme.text_secondary;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    // 音量调节滑块
+                    Rectangle {
+                        width: 80px;
+                        height: 34px;
+                        y: (parent.height - self.height) / 2;
+
+                        SSlider {
+                            width: 100%;
+                            height: 100%;
+                            track_height: 3px;
+                            hover_track_height: 5px;
+                            thumb_size: 10px;
+                            value: PlayerState.volume;
+                            changed(val) => {
+                                PlayerActions.change_volume(val);
+                            }
+                            drag_ended(val) => {
+                                PlayerActions.change_volume(val);
+                            }
+                        }
+                    }
+
+                    // 全屏歌词切换按钮
+                    Rectangle {
+                        width: 34px;
+                        height: 34px;
+                        border-radius: Theme.radius_full;
+                        background: PlayerState.is_lyric_expanded ? Theme.primary.with_alpha(15%) : (lyric_bar_touch.has_hover ? Theme.surface_hover : transparent);
+                        transform-scale: lyric_bar_touch.pressed ? 0.92 : 1.0;
+                        animate background, transform-scale { duration: 150ms; }
+
+                        lyric_bar_touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                PlayerActions.toggle_lyric_view();
+                            }
+                        }
+
+                        Image {
+                            width: 18px;
+                            height: 18px;
+                            source: @image-url("../assets/icons/lyric.svg");
+                            colorize: PlayerState.is_lyric_expanded ? Theme.primary : (lyric_bar_touch.has_hover ? Theme.text_primary : Theme.text_secondary);
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    // 播放队列抽屉入口
+                    Rectangle {
+                        width: 34px;
+                        height: 34px;
+                        border-radius: Theme.radius_full;
+                        background: PlayerState.is_queue_open ? Theme.primary.with_alpha(15%) : (queue_bar_touch.has_hover ? Theme.surface_hover : transparent);
+                        transform-scale: queue_bar_touch.pressed ? 0.92 : 1.0;
+                        animate background, transform-scale { duration: 150ms; }
+
+                        queue_bar_touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                PlayerActions.toggle_queue_drawer();
+                            }
+                        }
+
+                        Image {
+                            width: 18px;
+                            height: 18px;
+                            source: @image-url("../assets/icons/queue.svg");
+                            colorize: PlayerState.is_queue_open ? Theme.primary : (queue_bar_touch.has_hover ? Theme.text_primary : Theme.text_secondary);
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    // 更多选项
+                    Rectangle {
+                        width: 34px;
+                        height: 34px;
+                        border-radius: Theme.radius_full;
+                        background: more_v_touch.has_hover ? Theme.surface_hover : transparent;
+                        transform-scale: more_v_touch.pressed ? 0.92 : 1.0;
+                        animate background, transform-scale { duration: 150ms; }
+
+                        more_v_touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                ThemeActions.open_equalizer();
+                            }
+                        }
+
+                        Image {
+                            width: 18px;
+                            height: 18px;
+                            source: @image-url("../assets/icons/more_vertical.svg");
+                            colorize: more_v_touch.has_hover ? Theme.text_primary : Theme.text_secondary;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

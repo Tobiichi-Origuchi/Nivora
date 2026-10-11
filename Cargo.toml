@@ -1,0 +1,59 @@
+[package]
+name = "Nivora"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "nivora_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "nivora"
+path = "src/main.rs"
+
+[dependencies]
+arboard = "3"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+directories-next = "2"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+lofty = "0.25.4"
+material-colors = { version = "0.5.0", features = ["quantize"] }
+ncm-api-rs = "0.1"
+parking_lot = "0.12"
+qrcode = "0.14.1"
+rand = "0.8"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+rfd = "0.15"
+rodio = { version = "0.22", default-features = false, features = ["playback"] }
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+rustfft = "6"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+signalsmith-stretch = "0.1.3"
+slint = "1.18"
+symphonia = { version = "0.6", features = ["all"] }
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+walkdir = "2.5.0"
+
+[build-dependencies]
+slint-build = "1.18"
+
+# [profile.release]
+# opt-level = "s"
+# strip = true
+# lto = "thin"
+# panic = "abort"
+# codegen-units = 1
+#
+# [profile.release.package.rustfft]
+# opt-level = 3
+#
+# [profile.release.package.signalsmith-stretch]
+# opt-level = 3
+#
+# [profile.release.package.symphonia]
+# opt-level = 3

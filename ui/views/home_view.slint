@@ -1,0 +1,589 @@
+import { Theme } from "../theme.slint";
+import { PageDataState, AuthState, PlayerState } from "../app_state.slint";
+import { NavActions, PlayerActions } from "../app_actions.slint";
+import { PlaylistCard } from "../components/playlist_card.slint";
+import { SCard } from "../widgets/s_card.slint";
+
+
+export component HomeView inherits Flickable {
+    VerticalLayout {
+        width: root.width;
+        padding: 24px;
+        padding-bottom: 32px;
+        spacing: 24px;
+
+        // 顶部问候与收听数据栏
+        HorizontalLayout {
+            alignment: space-between;
+
+            // 问候标题
+            VerticalLayout {
+                spacing: 6px;
+                alignment: center;
+
+                Text {
+                    text: AuthState.is_logged_in ? PageDataState.greeting_text + "，" + AuthState.nickname : PageDataState.greeting_text;
+                    color: Theme.text_primary;
+                    font-size: 28px;
+                    font-weight: 800;
+                    letter-spacing: -0.2px;
+                }
+
+                Text {
+                    text: "戴上耳机，让世界安静一会儿";
+                    color: Theme.text_muted;
+                    font-size: 13.5px;
+                }
+            }
+
+            // 收听数据统计指标 (本周时长 / 新增收藏 / 连续收听)
+            HorizontalLayout {
+                spacing: 28px;
+                alignment: end;
+
+                // 本周时长
+                VerticalLayout {
+                    spacing: 2px;
+                    alignment: end;
+                    HorizontalLayout {
+                        alignment: end;
+                        spacing: 2px;
+                        Text {
+                            text: PageDataState.weekly_listen_hours;
+                            color: Theme.text_primary;
+                            font-size: 22px;
+                            font-weight: 800;
+                        }
+
+                        Text {
+                            text: "h";
+                            color: Theme.text_secondary;
+                            font-size: 13px;
+                            vertical-alignment: bottom;
+                        }
+                    }
+
+                    Text {
+                        text: "本周时长";
+                        color: Theme.text_muted;
+                        font-size: 11.5px;
+                        horizontal-alignment: right;
+                    }
+                }
+
+                // 新增收藏
+                VerticalLayout {
+                    spacing: 2px;
+                    alignment: end;
+                    HorizontalLayout {
+                        alignment: end;
+                        spacing: 2px;
+                        Text {
+                            text: "\{PageDataState.total_favorites}";
+                            color: Theme.text_primary;
+                            font-size: 22px;
+                            font-weight: 800;
+                        }
+
+                        Text {
+                            text: "首";
+                            color: Theme.text_secondary;
+                            font-size: 13px;
+                            vertical-alignment: bottom;
+                        }
+                    }
+
+                    Text {
+                        text: "收藏曲目";
+                        color: Theme.text_muted;
+                        font-size: 11.5px;
+                        horizontal-alignment: right;
+                    }
+                }
+
+                // 连续收听
+                VerticalLayout {
+                    spacing: 2px;
+                    alignment: end;
+                    HorizontalLayout {
+                        alignment: end;
+                        spacing: 2px;
+                        Text {
+                            text: "\{PageDataState.streak_days}";
+                            color: Theme.text_primary;
+                            font-size: 22px;
+                            font-weight: 800;
+                        }
+
+                        Text {
+                            text: "天";
+                            color: Theme.text_secondary;
+                            font-size: 13px;
+                            vertical-alignment: bottom;
+                        }
+                    }
+
+                    Text {
+                        text: "连续收听";
+                        color: Theme.text_muted;
+                        font-size: 11.5px;
+                        horizontal-alignment: right;
+                    }
+                }
+            }
+        }
+
+        // 快捷入口
+        HorizontalLayout {
+            spacing: 12px;
+
+            // 试试手气
+            SCard {
+                horizontal-stretch: 1;
+                card_radius: Theme.radius_xl;
+                hoverable: true;
+                clicked => {
+                    PlayerActions.play_random();
+                }
+
+                HorizontalLayout {
+                    padding: 14px;
+                    spacing: 12px;
+                    alignment: start;
+
+                    Rectangle {
+                        width: 38px;
+                        height: 38px;
+                        border-radius: Theme.radius_md;
+                        background: Theme.primary.with_alpha(10%);
+                        y: (parent.height - self.height) / 2;
+
+                        Image {
+                            width: 20px;
+                            height: 20px;
+                            source: @image-url("../assets/icons/dices.svg");
+                            colorize: Theme.primary;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 2px;
+                        Text {
+                            text: "试试手气";
+                            color: Theme.text_primary;
+                            font-size: 14px;
+                            font-weight: 600;
+                        }
+
+                        Text {
+                            text: "随机播放一首";
+                            color: Theme.text_muted;
+                            font-size: 11.5px;
+                        }
+                    }
+                }
+            }
+
+            // 每日推荐
+            SCard {
+                horizontal-stretch: 1;
+                card_radius: Theme.radius_xl;
+                hoverable: true;
+                clicked => { NavActions.navigate_to("daily"); }
+
+                HorizontalLayout {
+                    padding: 14px;
+                    spacing: 12px;
+                    alignment: start;
+
+                    Rectangle {
+                        width: 38px;
+                        height: 38px;
+                        border-radius: Theme.radius_md;
+                        background: Theme.primary.with_alpha(10%);
+                        y: (parent.height - self.height) / 2;
+
+                        Image {
+                            width: 20px;
+                            height: 20px;
+                            source: @image-url("../assets/icons/calendar.svg");
+                            colorize: Theme.primary;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 2px;
+                        Text {
+                            text: "每日推荐";
+                            color: Theme.text_primary;
+                            font-size: 14px;
+                            font-weight: 600;
+                        }
+
+                        Text {
+                            text: "每天为你精选";
+                            color: Theme.text_muted;
+                            font-size: 11.5px;
+                        }
+                    }
+                }
+            }
+
+            // 心动模式
+            SCard {
+                horizontal-stretch: 1;
+                card_radius: Theme.radius_xl;
+                hoverable: true;
+                clicked => { PlayerActions.play_all_from_list("liked"); }
+
+                HorizontalLayout {
+                    padding: 14px;
+                    spacing: 12px;
+                    alignment: start;
+
+                    Rectangle {
+                        width: 38px;
+                        height: 38px;
+                        border-radius: Theme.radius_md;
+                        background: Theme.primary.with_alpha(10%);
+                        y: (parent.height - self.height) / 2;
+
+                        Image {
+                            width: 20px;
+                            height: 20px;
+                            source: @image-url("../assets/icons/heart_mode.svg");
+                            colorize: Theme.primary;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 2px;
+                        Text {
+                            text: "心动模式";
+                            color: Theme.text_primary;
+                            font-size: 14px;
+                            font-weight: 600;
+                        }
+
+                        Text {
+                            text: "根据喜好智能播放";
+                            color: Theme.text_muted;
+                            font-size: 11.5px;
+                        }
+                    }
+                }
+            }
+
+            // 私人 FM
+            SCard {
+                horizontal-stretch: 1;
+                card_radius: Theme.radius_xl;
+                hoverable: true;
+                clicked => {
+                    PlayerActions.play_all_from_list("fm");
+                }
+
+                HorizontalLayout {
+                    padding: 14px;
+                    spacing: 12px;
+                    alignment: start;
+
+                    Rectangle {
+                        width: 38px;
+                        height: 38px;
+                        border-radius: Theme.radius_md;
+                        background: Theme.primary.with_alpha(10%);
+                        y: (parent.height - self.height) / 2;
+
+                        Image {
+                            width: 20px;
+                            height: 20px;
+                            source: @image-url("../assets/icons/radio.svg");
+                            colorize: Theme.primary;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 2px;
+                        Text {
+                            text: "私人 FM";
+                            color: Theme.text_primary;
+                            font-size: 14px;
+                            font-weight: 600;
+                        }
+
+                        Text {
+                            text: "为你不停推荐";
+                            color: Theme.text_muted;
+                            font-size: 11.5px;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 继续聆听
+        VerticalLayout {
+            spacing: 12px;
+
+            VerticalLayout {
+                spacing: 2px;
+                Text {
+                    text: "继续聆听";
+                    color: Theme.text_primary;
+                    font-size: 18px;
+                    font-weight: 700;
+                }
+
+                Text {
+                    text: PageDataState.continue_listening_tracks.length > 0 ? ("你最近在听的 " + PageDataState.continue_listening_tracks.length + " 首歌") : "暂无最近收听记录，开始聆听吧";
+                    color: Theme.text_muted;
+                    font-size: 12px;
+                }
+            }
+
+            // 继续聆听卡片流
+            if PageDataState.continue_listening_tracks.length > 0: Flickable {
+                horizontal-stretch: 1;
+                height: 72px;
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: start;
+
+                    for track[idx] in PageDataState.continue_listening_tracks: SCard {
+                        width: 340px;
+                        card_radius: Theme.radius_xl;
+                        hoverable: true;
+                        clicked => {
+                            PlayerActions.play_track_by_id(track.id);
+                        }
+
+                        HorizontalLayout {
+                            padding-left: 14px;
+                            padding-right: 14px;
+                            padding-top: 10px;
+                            padding-bottom: 10px;
+                            spacing: 12px;
+                            alignment: start;
+
+                            // 序号补零
+                            Text {
+                                text: (idx < 9 ? "0" : "") + (idx + 1);
+                                color: Theme.text_muted.with_alpha(45%);
+                                font-size: 13px;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+
+                            // 48px 封面
+                            Rectangle {
+                                width: 48px;
+                                height: 48px;
+                                border-radius: Theme.radius_md;
+                                clip: true;
+                                background: Theme.surface_container;
+                                y: (parent.height - self.height) / 2;
+
+                                if track.has_cover: Image {
+                                    width: 100%;
+                                    height: 100%;
+                                    source: track.cover_image;
+                                    image-fit: cover;
+                                }
+                                if !track.has_cover: Image {
+                                    width: 22px;
+                                    height: 22px;
+                                    source: @image-url("../assets/icons/music.svg");
+                                    colorize: Theme.text_muted;
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
+                                }
+                            }
+
+                            // 歌曲名与歌手
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                alignment: center;
+                                spacing: 3px;
+
+                                Text {
+                                    text: track.title;
+                                    color: Theme.text_primary;
+                                    font-size: 14px;
+                                    font-weight: 600;
+                                    overflow: elide;
+                                }
+
+                                Text {
+                                    text: track.artists != "" ? track.artists : "未知歌手";
+                                    color: Theme.text_muted;
+                                    font-size: 12px;
+                                    overflow: elide;
+                                }
+                            }
+
+                            // 播放时长标签
+                            Text {
+                                text: track.duration_str;
+                                color: Theme.text_muted;
+                                font-size: 11.5px;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if PageDataState.continue_listening_tracks.length == 0: HorizontalLayout {
+                spacing: 12px;
+
+                SCard {
+                    width: 360px;
+                    card_radius: Theme.radius_xl;
+                    hoverable: true;
+                    clicked => {
+                        PlayerActions.toggle_play();
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 14px;
+                        padding-right: 14px;
+                        padding-top: 10px;
+                        padding-bottom: 10px;
+                        spacing: 12px;
+                        alignment: start;
+
+                        // 序号补零
+                        Text {
+                            text: "01";
+                            color: Theme.text_muted.with_alpha(45%);
+                            font-size: 13px;
+                            font-weight: 700;
+                            vertical-alignment: center;
+                        }
+
+                        // 48px 封面
+                        Rectangle {
+                            width: 48px;
+                            height: 48px;
+                            border-radius: Theme.radius_md;
+                            clip: true;
+                            background: Theme.surface_container;
+                            y: (parent.height - self.height) / 2;
+
+                            if PlayerState.has_track_cover: Image {
+                                width: 100%;
+                                height: 100%;
+                                source: PlayerState.track_cover_image;
+                                image-fit: cover;
+                            }
+                            if !PlayerState.has_track_cover: Image {
+                                width: 22px;
+                                height: 22px;
+                                source: @image-url("../assets/icons/music.svg");
+                                colorize: Theme.text_muted;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                            }
+                        }
+
+                        // 歌曲名与歌手
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            alignment: center;
+                            spacing: 3px;
+
+                            Text {
+                                text: PlayerState.track_title != "" ? PlayerState.track_title : "等待播放";
+                                color: Theme.text_primary;
+                                font-size: 14px;
+                                font-weight: 600;
+                                overflow: elide;
+                            }
+
+                            Text {
+                                text: PlayerState.track_artists != "" ? PlayerState.track_artists : "网易云音乐";
+                                color: Theme.text_muted;
+                                font-size: 12px;
+                                overflow: elide;
+                            }
+                        }
+
+                        // 播放状态标签
+                        Text {
+                            text: PlayerState.is_playing ? "正在播放" : "准备就绪";
+                            color: Theme.primary;
+                            font-size: 11.5px;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 推荐歌单
+        VerticalLayout {
+            spacing: 12px;
+
+            VerticalLayout {
+                spacing: 2px;
+                Text {
+                    text: "推荐歌单";
+                    color: Theme.text_primary;
+                    font-size: 18px;
+                    font-weight: 700;
+                }
+
+                Text {
+                    text: "大家都在听的热门歌单";
+                    color: Theme.text_muted;
+                    font-size: 12px;
+                }
+            }
+
+            // 歌单卡片网格
+            VerticalLayout {
+                spacing: 16px;
+
+                if PageDataState.home_recommend_row1.length > 0: HorizontalLayout {
+                    spacing: 16px;
+                    for pl in PageDataState.home_recommend_row1: PlaylistCard {
+                        playlist: pl;
+                        clicked => {
+                            NavActions.open_playlist_detail(pl.id);
+                        }
+                        play_clicked => {
+                            PlayerActions.play_all_from_list(pl.id);
+                        }
+                    }
+                }
+
+                if PageDataState.home_recommend_row2.length > 0: HorizontalLayout {
+                    spacing: 16px;
+                    for pl in PageDataState.home_recommend_row2: PlaylistCard {
+                        playlist: pl;
+                        clicked => {
+                            NavActions.open_playlist_detail(pl.id);
+                        }
+                        play_clicked => {
+                            PlayerActions.play_all_from_list(pl.id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

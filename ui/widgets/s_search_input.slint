@@ -1,0 +1,112 @@
+import { Theme } from "../theme.slint";
+
+export component SSearchInput inherits Rectangle {
+    in-out property <string> text: "";
+    in property <string> placeholder: "搜索音乐、歌手、歌词...";
+    in property <length> input_width: 240px;
+    in property <length> input_height: 40px;
+
+    callback search_submitted(string);
+    callback text_changed(string);
+    callback cleared();
+
+    width: root.input_width;
+    height: root.input_height;
+    border-radius: Theme.radius_full;
+    background: input.has-focus ? Theme.surface_elevated : (touch_area.has_hover ? Theme.on_surface.with_alpha(10%) : Theme.on_surface.with_alpha(5%));
+    border-width: 1px;
+    border-color: input.has-focus ? Theme.primary : (touch_area.has_hover ? Theme.on_surface.with_alpha(25%) : Theme.on_surface.with_alpha(15%));
+
+    animate background, border-color {
+        duration: 200ms;
+        easing: ease-out;
+    }
+
+    touch_area := TouchArea {
+        clicked => {
+            input.focus();
+        }
+    }
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 12px;
+        spacing: 8px;
+        alignment: start;
+
+        // 放大镜图标
+        Image {
+            width: 16px;
+            height: 16px;
+            source: @image-url("../assets/icons/search.svg");
+            colorize: input.has-focus ? Theme.primary : Theme.text_muted;
+            y: (parent.height - self.height) / 2;
+            animate colorize { duration: 150ms; }
+        }
+
+        // 输入区域
+        Rectangle {
+            horizontal-stretch: 1;
+            clip: true;
+
+            // 占位文本
+            if root.text == "": Text {
+                width: 100%;
+                text: root.placeholder;
+                color: Theme.text_muted.with_alpha(60%);
+                font-size: 13px;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+
+            input := TextInput {
+                width: 100%;
+                text <=> root.text;
+                color: Theme.text_primary;
+                font-size: 13px;
+                vertical-alignment: center;
+                single-line: true;
+
+                accepted => {
+                    root.search_submitted(self.text);
+                }
+
+                edited => {
+                    root.text_changed(self.text);
+                }
+            }
+        }
+
+        // 清除按钮
+        if root.text != "": Rectangle {
+            width: 22px;
+            height: 22px;
+            y: (parent.height - self.height) / 2;
+            border-radius: Theme.radius_full;
+            background: clear_touch.has_hover ? Theme.surface_hover : transparent;
+            animate background { duration: 150ms; }
+
+            clear_touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.text = "";
+                    root.cleared();
+                    input.focus();
+                }
+            }
+
+            Image {
+                width: 12px;
+                height: 12px;
+                source: @image-url("../assets/icons/close.svg");
+                colorize: clear_touch.has_hover ? Theme.primary : Theme.text_muted;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+        }
+    }
+
+    public function focus_input() {
+        input.focus();
+    }
+}

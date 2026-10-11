@@ -1,0 +1,156 @@
+import { Theme } from "../theme.slint";
+import { AuthState } from "../app_state.slint";
+import { AuthActions } from "../app_actions.slint";
+import { SButton } from "../widgets/s_button.slint";
+
+export component LoginDialog inherits Rectangle {
+    in property <bool> is_open: false;
+
+    opacity: root.is_open ? 1.0 : 0.0;
+    visible: self.opacity > 0.01;
+
+    animate opacity {
+        duration: root.is_open ? 200ms : 150ms;
+        easing: root.is_open ? ease-out : ease-in;
+    }
+
+    background: Theme.scrim;
+
+    // 拦截背景点击
+    TouchArea {
+        clicked => {
+            AuthState.is_login_dialog_open = false;
+            AuthActions.close_login();
+        }
+    }
+
+    // 居中对话框卡片
+    dialog_card := Rectangle {
+        width: 380px;
+        height: 460px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: Theme.radius_2xl;
+        background: Theme.surface_elevated;
+        border-width: 1px;
+        border-color: Theme.glass_border_bright;
+        drop-shadow-blur: 40px;
+        drop-shadow-offset-y: 12px;
+        drop-shadow-color: Theme.shadow_elevated;
+
+        transform-scale: root.is_open ? 1.0 : 0.96;
+        animate transform-scale {
+            duration: root.is_open ? 200ms : 150ms;
+            easing: root.is_open ? cubic-bezier(0.16, 1, 0.3, 1) : ease-in;
+        }
+
+        // 拦截内部点击
+        TouchArea { }
+
+        VerticalLayout {
+            padding: 28px;
+            spacing: 20px;
+
+            // 对话框头部
+            HorizontalLayout {
+                height: 36px;
+                alignment: space-between;
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    Text {
+                        text: "扫码登录网易云";
+                        color: Theme.text_primary;
+                        font-size: 20px;
+                        font-weight: 800;
+                        vertical-alignment: center;
+                    }
+                }
+
+                // 关闭按钮
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: Theme.radius_full;
+                    background: close_touch.has_hover ? Theme.surface_hover : Theme.surface_container;
+                    border-width: 1px;
+                    border-color: Theme.glass_border;
+                    transform-scale: close_touch.pressed ? 0.92 : (close_touch.has_hover ? 1.05 : 1.0);
+
+                    animate transform-scale, background {
+                        duration: 150ms;
+                        easing: cubic-bezier(0.16, 1, 0.3, 1);
+                    }
+
+                    close_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            AuthState.is_login_dialog_open = false;
+                            AuthActions.close_login();
+                        }
+                    }
+
+                    Image {
+                        width: 14px;
+                        height: 14px;
+                        source: @image-url("../assets/icons/close.svg");
+                        colorize: close_touch.has_hover ? Theme.text_primary : Theme.text_muted;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+            }
+
+            // 二维码白底展示区
+            HorizontalLayout {
+                alignment: center;
+
+                Rectangle {
+                    width: 220px;
+                    height: 220px;
+                    border-radius: Theme.radius_xl;
+                    background: #ffffff;
+                    border-width: 1px;
+                    border-color: Theme.glass_border;
+                    drop-shadow-blur: 16px;
+                    drop-shadow-color: #000000.with_alpha(15%);
+
+                    // 动态二维码图片展示
+                    Image {
+                        width: 196px;
+                        height: 196px;
+                        source: AuthState.qr_code_image;
+                        image-fit: contain;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+            }
+
+            // 状态说明文本
+            Text {
+                text: AuthState.qr_status_text != "" ? AuthState.qr_status_text : "请使用网易云音乐 APP 扫码登录";
+                color: Theme.text_secondary;
+                font-size: 13px;
+                font-weight: 500;
+                horizontal-alignment: center;
+            }
+
+            // 刷新二维码按钮
+            HorizontalLayout {
+                alignment: center;
+                SButton {
+                    text: "刷新二维码";
+                    type: "primary";
+                    variant: "secondary";
+                    btn_width: 160px;
+                    clicked => {
+                        AuthActions.refresh_qr();
+                    }
+                }
+            }
+        }
+    }
+}

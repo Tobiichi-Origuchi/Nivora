@@ -1,0 +1,242 @@
+import { Theme } from "../theme.slint";
+import { PlayerState } from "../app_state.slint";
+import { PlayerActions } from "../app_actions.slint";
+import { TrackUi } from "../types.slint";
+
+export component QueuePopover inherits Rectangle {
+    in property <bool> is_open: false;
+
+    width: 320px;
+    height: 480px;
+    border-radius: Theme.radius_xl;
+    background: Theme.surface_panel;
+    border-width: 1px;
+    border-color: Theme.outline_variant;
+    drop-shadow-offset-y: 12px;
+    drop-shadow-blur: 28px;
+    drop-shadow-color: Theme.shadow_elevated;
+    clip: true;
+
+    opacity: root.is_open ? 1.0 : 0.0;
+    visible: self.opacity > 0.01;
+    transform-scale: root.is_open ? 1.0 : 0.95;
+
+    animate opacity, transform-scale {
+        duration: root.is_open ? 200ms : 150ms;
+        easing: root.is_open ? cubic-bezier(0.16, 1, 0.3, 1) : ease-in;
+    }
+
+    VerticalLayout {
+        padding: 0px;
+        spacing: 0px;
+
+        // 头部标题栏
+        Rectangle {
+            height: 52px;
+
+            // 头部底部分隔线
+            Rectangle {
+                y: parent.height - 1px;
+                width: 100%;
+                height: 1px;
+                background: Theme.outline_variant;
+            }
+
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 12px;
+                alignment: space-between;
+
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 2px;
+
+                    Text {
+                        text: "播放列表";
+                        color: Theme.text_primary;
+                        font-size: 14px;
+                        font-weight: 600;
+                    }
+
+                    Text {
+                        text: "共 \{PlayerState.queue_count} 首";
+                        color: Theme.text_secondary;
+                        font-size: 11px;
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 4px;
+                    alignment: end;
+
+                    // 清空队列按钮
+                    Rectangle {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: Theme.radius_full;
+                        background: clear_touch.has_hover ? Theme.surface_hover : transparent;
+                        y: (parent.height - self.height) / 2;
+                        transform-scale: clear_touch.pressed ? 0.92 : 1.0;
+                        animate transform-scale, background { duration: 150ms; }
+
+                        clear_touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { PlayerActions.clear_queue(); }
+                        }
+
+                        Image {
+                            width: 16px;
+                            height: 16px;
+                            source: @image-url("../assets/icons/close.svg");
+                            colorize: clear_touch.has_hover ? Theme.primary : Theme.text_muted;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    // 关闭按钮
+                    Rectangle {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: Theme.radius_full;
+                        background: close_touch.has_hover ? Theme.surface_hover : transparent;
+                        y: (parent.height - self.height) / 2;
+                        transform-scale: close_touch.pressed ? 0.92 : 1.0;
+                        animate transform-scale, background { duration: 150ms; }
+
+                        close_touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { PlayerActions.toggle_queue_drawer(); }
+                        }
+
+                        Image {
+                            width: 16px;
+                            height: 16px;
+                            source: @image-url("../assets/icons/chevron_down.svg");
+                            colorize: close_touch.has_hover ? Theme.primary : Theme.text_muted;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 歌曲列表区域
+        if PlayerState.queue_count == 0: Rectangle {
+            vertical-stretch: 1;
+            VerticalLayout {
+                alignment: center;
+                spacing: 8px;
+
+                HorizontalLayout {
+                    alignment: center;
+                    Image {
+                        width: 36px;
+                        height: 36px;
+                        source: @image-url("../assets/icons/music.svg");
+                        colorize: Theme.text_disabled;
+                    }
+                }
+
+                Text {
+                    text: "播放队列为空";
+                    color: Theme.text_muted;
+                    font-size: 13px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        if PlayerState.queue_count > 0: Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding: 6px;
+                spacing: 2px;
+
+                for track[idx] in PlayerState.queue_tracks: Rectangle {
+                    height: 48px;
+                    border-radius: Theme.radius_md;
+                    property <bool> is_current: track.id == PlayerState.track_id;
+                    background: is_current ? Theme.primary.with_alpha(10%) : (row_touch.has_hover ? Theme.surface_hover : transparent);
+                    transform-scale: row_touch.pressed ? 0.98 : 1.0;
+                    animate background, transform-scale { duration: 150ms; }
+
+                    row_touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            PlayerActions.play_track_by_id(track.id);
+                        }
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        spacing: 10px;
+                        alignment: space-between;
+
+                        // 歌曲名与歌手
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            alignment: center;
+                            spacing: 2px;
+
+                            Text {
+                                text: track.title;
+                                color: is_current ? Theme.primary : (row_touch.has_hover ? Theme.text_primary : Theme.text_secondary);
+                                font-size: 13px;
+                                font-weight: is_current ? 600 : 500;
+                                overflow: elide;
+                            }
+
+                            Text {
+                                text: track.artists;
+                                color: is_current ? Theme.primary.with_alpha(80%) : Theme.text_muted;
+                                font-size: 11px;
+                                overflow: elide;
+                            }
+                        }
+
+                        // 时长与移除
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: end;
+
+                            Text {
+                                text: track.duration_str;
+                                color: Theme.text_muted;
+                                font-size: 11px;
+                                vertical-alignment: center;
+                            }
+
+                            Rectangle {
+                                width: 24px;
+                                height: 24px;
+                                border-radius: Theme.radius_full;
+                                background: del_touch.has_hover ? Theme.surface_hover : transparent;
+                                y: (parent.height - self.height) / 2;
+
+                                del_touch := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => {
+                                        PlayerActions.remove_queue_track(idx);
+                                    }
+                                }
+
+                                Image {
+                                    width: 12px;
+                                    height: 12px;
+                                    source: @image-url("../assets/icons/close.svg");
+                                    colorize: del_touch.has_hover ? Theme.primary : Theme.text_muted;
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

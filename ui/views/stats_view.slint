@@ -1,0 +1,373 @@
+import { Theme } from "../theme.slint";
+import { PageDataState, AuthState, PlayerState } from "../app_state.slint";
+import { PlayerActions, NavActions } from "../app_actions.slint";
+import { TrackTable } from "../components/track_table.slint";
+import { SCard } from "../widgets/s_card.slint";
+import { SButton } from "../widgets/s_button.slint";
+import { STag } from "../widgets/s_tag.slint";
+
+export component StatsView inherits Flickable {
+    VerticalLayout {
+        padding: 28px;
+        padding-bottom: 28px;
+        spacing: 28px;
+
+        // 顶栏标题
+        HorizontalLayout {
+            alignment: space-between;
+
+            VerticalLayout {
+                spacing: 6px;
+                Text {
+                    text: "音乐足迹与收听统计";
+                    color: Theme.text_primary;
+                    font-size: 26px;
+                    font-weight: 800;
+                    letter-spacing: -0.3px;
+                }
+
+                Text {
+                    text: "记录你在 Nivora 的每一次音乐相遇与聆听轨迹";
+                    color: Theme.text_muted;
+                    font-size: 13px;
+                }
+            }
+
+            STag {
+                text: "实时统计";
+                variant: "primary";
+                y: (parent.height - self.height) / 2;
+            }
+        }
+
+        // 指标看板
+        HorizontalLayout {
+            spacing: 16px;
+
+            // 本周听歌时长
+            SCard {
+                horizontal-stretch: 1;
+                card_radius: Theme.radius_xl;
+
+                VerticalLayout {
+                    padding: 18px;
+                    spacing: 8px;
+                    alignment: center;
+
+                    HorizontalLayout {
+                        alignment: space-between;
+                        Text {
+                            text: "本周收听时长";
+                            color: Theme.text_muted;
+                            font-size: 12.5px;
+                            font-weight: 500;
+                        }
+
+                        Image {
+                            width: 16px;
+                            height: 16px;
+                            source: @image-url("../assets/icons/chart_pie.svg");
+                            colorize: Theme.primary;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 4px;
+                        alignment: start;
+                        Text {
+                            text: PageDataState.weekly_listen_hours;
+                            color: Theme.text_primary;
+                            font-size: 28px;
+                            font-weight: 800;
+                        }
+
+                        Text {
+                            text: "小时";
+                            color: Theme.text_secondary;
+                            font-size: 13px;
+                            font-weight: 600;
+                            vertical-alignment: bottom;
+                        }
+                    }
+
+                    Text {
+                        text: "较上周 " + PageDataState.weekly_growth_str;
+                        color: #10b981;
+                        font-size: 11.5px;
+                        font-weight: 600;
+                    }
+                }
+            }
+
+            // 累计播放歌曲
+            SCard {
+                horizontal-stretch: 1;
+                card_radius: Theme.radius_xl;
+
+                VerticalLayout {
+                    padding: 18px;
+                    spacing: 8px;
+                    alignment: center;
+
+                    HorizontalLayout {
+                        alignment: space-between;
+                        Text {
+                            text: "累计收听曲目";
+                            color: Theme.text_muted;
+                            font-size: 12.5px;
+                            font-weight: 500;
+                        }
+
+                        Image {
+                            width: 16px;
+                            height: 16px;
+                            source: @image-url("../assets/icons/music.svg");
+                            colorize: #2b5aeb;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 4px;
+                        alignment: start;
+                        Text {
+                            text: "\{PageDataState.total_listen_count}";
+                            color: Theme.text_primary;
+                            font-size: 28px;
+                            font-weight: 800;
+                        }
+
+                        Text {
+                            text: "首";
+                            color: Theme.text_secondary;
+                            font-size: 13px;
+                            font-weight: 600;
+                            vertical-alignment: bottom;
+                        }
+                    }
+
+                    Text {
+                        text: "收藏率 " + PageDataState.favorite_ratio_str;
+                        color: Theme.text_muted;
+                        font-size: 11.5px;
+                    }
+                }
+            }
+
+            // 连续收听天数
+            SCard {
+                horizontal-stretch: 1;
+                card_radius: Theme.radius_xl;
+
+                VerticalLayout {
+                    padding: 18px;
+                    spacing: 8px;
+                    alignment: center;
+
+                    HorizontalLayout {
+                        alignment: space-between;
+                        Text {
+                            text: "连续听歌天数";
+                            color: Theme.text_muted;
+                            font-size: 12.5px;
+                            font-weight: 500;
+                        }
+
+                        Image {
+                            width: 16px;
+                            height: 16px;
+                            source: @image-url("../assets/icons/calendar.svg");
+                            colorize: #f59e0b;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 4px;
+                        alignment: start;
+                        Text {
+                            text: "\{PageDataState.streak_days}";
+                            color: Theme.text_primary;
+                            font-size: 28px;
+                            font-weight: 800;
+                        }
+
+                        Text {
+                            text: "天";
+                            color: Theme.text_secondary;
+                            font-size: 13px;
+                            font-weight: 600;
+                            vertical-alignment: bottom;
+                        }
+                    }
+
+                    Text {
+                        text: "持续保持音乐热爱";
+                        color: #f59e0b;
+                        font-size: 11.5px;
+                        font-weight: 600;
+                    }
+                }
+            }
+
+            // 最常聆听流派
+            SCard {
+                horizontal-stretch: 1;
+                card_radius: Theme.radius_xl;
+
+                VerticalLayout {
+                    padding: 18px;
+                    spacing: 8px;
+                    alignment: center;
+
+                    HorizontalLayout {
+                        alignment: space-between;
+                        Text {
+                            text: "偏好流派";
+                            color: Theme.text_muted;
+                            font-size: 12.5px;
+                            font-weight: 500;
+                        }
+
+                        Image {
+                            width: 16px;
+                            height: 16px;
+                            source: @image-url("../assets/icons/sparkles.svg");
+                            colorize: #8b5cf6;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 4px;
+                        alignment: start;
+                        Text {
+                            text: "Pop / 流行";
+                            color: Theme.text_primary;
+                            font-size: 20px;
+                            font-weight: 800;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    Text {
+                        text: "占总收听 42%";
+                        color: Theme.text_muted;
+                        font-size: 11.5px;
+                    }
+                }
+            }
+        }
+
+        // 聆听时段分布看板
+        SCard {
+            card_radius: Theme.radius_xl;
+
+            VerticalLayout {
+                padding: 20px;
+                spacing: 16px;
+
+                HorizontalLayout {
+                    alignment: space-between;
+
+                    VerticalLayout {
+                        spacing: 2px;
+                        Text {
+                            text: "一周听歌时间段活跃分布";
+                            color: Theme.text_primary;
+                            font-size: 16px;
+                            font-weight: 700;
+                        }
+
+                        Text {
+                            text: "通常在夜晚 20:00 ~ 23:00 最具听歌热情";
+                            color: Theme.text_muted;
+                            font-size: 12px;
+                        }
+                    }
+                }
+
+                // 7 天柱状分布图模拟
+                HorizontalLayout {
+                    spacing: 16px;
+                    height: 90px;
+                    alignment: space-around;
+
+                    for day_data[idx] in [
+                        { name: "周一", ratio: 0.65 },
+                        { name: "周二", ratio: 0.45 },
+                        { name: "周三", ratio: 0.80 },
+                        { name: "周四", ratio: 0.70 },
+                        { name: "周五", ratio: 0.95 },
+                        { name: "周六", ratio: 1.00 },
+                        { name: "周日", ratio: 0.85 },
+                    ]: VerticalLayout {
+                        alignment: end;
+                        spacing: 6px;
+
+                        Rectangle {
+                            width: 24px;
+                            height: clamp(60px * day_data.ratio, 12px, 60px);
+                            border-radius: Theme.radius_sm;
+                            background: idx == 5 ? @linear-gradient(180deg, Theme.primary 0%, #ff8080 100%) : Theme.surface_hover;
+                            x: (parent.width - self.width) / 2;
+                        }
+
+                        Text {
+                            text: day_data.name;
+                            color: idx == 5 ? Theme.primary : Theme.text_muted;
+                            font-size: 11.5px;
+                            font-weight: idx == 5 ? 700 : 500;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 最近最常播放榜单
+        VerticalLayout {
+            spacing: 14px;
+
+            HorizontalLayout {
+                alignment: space-between;
+
+                VerticalLayout {
+                    spacing: 2px;
+                    Text {
+                        text: "最常聆听歌曲";
+                        color: Theme.text_primary;
+                        font-size: 18px;
+                        font-weight: 700;
+                    }
+
+                    Text {
+                        text: "基于你近期的本地与在线单曲播放频次自动计算";
+                        color: Theme.text_muted;
+                        font-size: 12px;
+                    }
+                }
+
+                SButton {
+                    text: "播放全部";
+                    type: "primary";
+                    variant: "secondary";
+                    has_icon: true;
+                    icon: @image-url("../assets/icons/play.svg");
+                    clicked => {
+                        if PageDataState.liked_songs.length > 0 {
+                            PlayerActions.play_all_from_list("liked");
+                        }
+                    }
+                }
+            }
+
+            TrackTable {
+                height: 420px;
+                tracks: PageDataState.liked_songs;
+                list_id: "liked";
+            }
+        }
+    }
+}

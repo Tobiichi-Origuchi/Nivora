@@ -1,0 +1,61 @@
+export struct TrackUi {
+    id: string,
+    artist_id: string,
+    title: string,
+    artists: string,
+    album: string,
+    duration_str: string,
+    duration_ms: int,
+    cover_url: string,
+    cover_image: image,
+    has_cover: bool,
+    is_vip: bool,
+    is_liked: bool,
+}
+
+export struct PlaylistUi {
+    id: string,
+    title: string,
+    cover_url: string,
+    cover_image: image,
+    has_cover: bool,
+    track_count: int,
+    play_count_str: string,
+    creator_name: string,
+    description: string,
+}
+
+export struct LyricWordUi {
+    word: string,
+    start_time_ms: int,
+    end_time_ms: int,
+}
+
+export struct LyricLineUi {
+    main_text: string,
+    trans_text: string,
+    roman_text: string,
+    start_time_ms: int,
+    end_time_ms: int,
+    is_active: bool,
+    is_bg: bool,
+    words: [LyricWordUi],
+}
+
+export struct CommentUi {
+    user_nickname: string,
+    user_avatar: string,
+    content: string,
+    time_str: string,
+    liked_count: int,
+}
+
+export struct DownloadTaskUi {
+    task_id: string,
+    title: string,
+    artist: string,
+    quality: string,
+    status: string,
+    progress: float,
+    size_str: string,
+}

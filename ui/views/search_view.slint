@@ -1,0 +1,253 @@
+import { Theme } from "../theme.slint";
+import { PageDataState, NavState } from "../app_state.slint";
+import { NavActions, PlayerActions } from "../app_actions.slint";
+import { TrackTable } from "../components/track_table.slint";
+import { PlaylistCard } from "../components/playlist_card.slint";
+import { STag } from "../widgets/s_tag.slint";
+import { SSearchInput } from "../widgets/s_search_input.slint";
+import { SEmptyState } from "../widgets/s_empty_state.slint";
+
+export component SearchView inherits Rectangle {
+    VerticalLayout {
+        padding-left: 28px;
+        padding-right: 28px;
+        padding-top: 24px;
+        padding-bottom: 16px;
+        spacing: 20px;
+
+        // 搜索中心标题
+        HorizontalLayout {
+            alignment: space-between;
+
+            VerticalLayout {
+                spacing: 6px;
+                Text {
+                    text: NavState.search_keyword != "" ? "搜索结果: \"" + NavState.search_keyword + "\"" : "全网音乐搜索";
+                    color: Theme.text_primary;
+                    font-size: 26px;
+                    font-weight: 800;
+                }
+
+                Text {
+                    text: "海量高解析度曲库，即搜即听";
+                    color: Theme.text_muted;
+                    font-size: 13px;
+                }
+            }
+
+            // 分段控制器
+            Rectangle {
+                height: 38px;
+                border-radius: Theme.radius_full;
+                background: Theme.surface_container;
+                border-width: 1px;
+                border-color: Theme.glass_border;
+                y: (parent.height - self.height) / 2;
+
+                HorizontalLayout {
+                    padding: 3px;
+                    spacing: 4px;
+
+                    // 单曲 Tab
+                    Rectangle {
+                        border-radius: Theme.radius_full;
+                        background: PageDataState.search_tab == "songs" ? Theme.surface_elevated : transparent;
+                        border-width: PageDataState.search_tab == "songs" ? 1px : 0px;
+                        border-color: Theme.glass_border_bright;
+                        drop-shadow-blur: PageDataState.search_tab == "songs" ? 8px : 0px;
+                        drop-shadow-color: Theme.shadow_ambient;
+
+                        tab_s_touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { PageDataState.search_tab = "songs"; }
+                        }
+
+                        HorizontalLayout {
+                            padding-left: 18px;
+                            padding-right: 18px;
+                            alignment: center;
+                            Text {
+                                text: "单曲";
+                                color: PageDataState.search_tab == "songs" ? Theme.text_primary : Theme.text_secondary;
+                                font-size: 13px;
+                                font-weight: PageDataState.search_tab == "songs" ? 700 : 500;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+
+                    // 歌单 Tab
+                    Rectangle {
+                        border-radius: Theme.radius_full;
+                        background: PageDataState.search_tab == "playlists" ? Theme.surface_elevated : transparent;
+                        border-width: PageDataState.search_tab == "playlists" ? 1px : 0px;
+                        border-color: Theme.glass_border_bright;
+                        drop-shadow-blur: PageDataState.search_tab == "playlists" ? 8px : 0px;
+                        drop-shadow-color: Theme.shadow_ambient;
+
+                        tab_p_touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { PageDataState.search_tab = "playlists"; }
+                        }
+
+                        HorizontalLayout {
+                            padding-left: 18px;
+                            padding-right: 18px;
+                            alignment: center;
+                            Text {
+                                text: "歌单";
+                                color: PageDataState.search_tab == "playlists" ? Theme.text_primary : Theme.text_secondary;
+                                font-size: 13px;
+                                font-weight: PageDataState.search_tab == "playlists" ? 700 : 500;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 搜索输入栏
+        HorizontalLayout {
+            alignment: start;
+            SSearchInput {
+                text <=> NavState.search_keyword;
+                input_width: min(root.width - 56px, 580px);
+                input_height: 44px;
+                placeholder: "输入歌曲名、歌手、专辑或歌词，按回车立即搜索...";
+                search_submitted(kw) => {
+                    if kw != "" {
+                        NavActions.trigger_search(kw);
+                    }
+                }
+                text_changed(kw) => {
+                    NavState.search_keyword = kw;
+                }
+                cleared => {
+                    NavState.search_keyword = "";
+                }
+            }
+        }
+
+        // 热门搜索关键词胶囊流
+        HorizontalLayout {
+            spacing: 12px;
+            alignment: start;
+            height: 32px;
+
+            Text {
+                text: "热门探索:";
+                color: Theme.text_muted;
+                font-size: 13px;
+                font-weight: 600;
+                vertical-alignment: center;
+                min-width: 65px;
+            }
+
+            Flickable {
+                horizontal-stretch: 1;
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    height: 32px;
+
+                    for kw in PageDataState.hot_keywords: Rectangle {
+                        height: 28px;
+                        y: 2px;
+                        border-radius: Theme.radius_full;
+                        background: kw_touch.has_hover ? Theme.surface_active : Theme.surface_container;
+                        border-width: 1px;
+                        border-color: kw_touch.has_hover ? Theme.glass_border_bright : Theme.glass_border;
+                        transform-scale: kw_touch.pressed ? 0.95 : (kw_touch.has_hover ? 1.05 : 1.0);
+
+                        animate transform-scale, background, border-color {
+                            duration: 150ms;
+                            easing: ease-out;
+                        }
+
+                        kw_touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { NavActions.trigger_search(kw); }
+                        }
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+                            alignment: center;
+                            Text {
+                                text: kw;
+                                color: kw_touch.has_hover ? Theme.primary : Theme.text_secondary;
+                                font-size: 12px;
+                                font-weight: 500;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 分割线
+        Rectangle {
+            height: 1px;
+            background: Theme.glass_border;
+        }
+
+        // 搜索结果呈现
+        if PageDataState.search_tab == "songs" && PageDataState.search_songs.length > 0: TrackTable {
+            vertical-stretch: 1;
+            tracks: PageDataState.search_songs;
+            list_id: "search";
+        }
+
+        if PageDataState.search_tab == "songs" && PageDataState.search_songs.length == 0: SEmptyState {
+            vertical-stretch: 1;
+            icon: @image-url("../assets/icons/search.svg");
+            title: NavState.search_keyword != "" ? "未找到与 \"" + NavState.search_keyword + "\" 相关的单曲" : "输入关键词探索全网音乐";
+            description: NavState.search_keyword != "" ? "换个关键词试试，或检查拼写是否正确" : "支持歌曲名、歌手、专辑等";
+        }
+
+        if PageDataState.search_tab == "playlists" && (PageDataState.search_playlists_row1.length > 0 || PageDataState.search_playlists.length > 0): Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                spacing: 16px;
+
+                if PageDataState.search_playlists_row1.length > 0: HorizontalLayout {
+                    spacing: 16px;
+                    for pl in PageDataState.search_playlists_row1: PlaylistCard {
+                        playlist: pl;
+                        clicked => { NavActions.open_playlist_detail(pl.id); }
+                        play_clicked => { PlayerActions.play_all_from_list(pl.id); }
+                    }
+                }
+
+                if PageDataState.search_playlists_row2.length > 0: HorizontalLayout {
+                    spacing: 16px;
+                    for pl in PageDataState.search_playlists_row2: PlaylistCard {
+                        playlist: pl;
+                        clicked => { NavActions.open_playlist_detail(pl.id); }
+                        play_clicked => { PlayerActions.play_all_from_list(pl.id); }
+                    }
+                }
+
+                if PageDataState.search_playlists_row1.length == 0 && PageDataState.search_playlists.length > 0: HorizontalLayout {
+                    spacing: 16px;
+                    for pl in PageDataState.search_playlists: PlaylistCard {
+                        playlist: pl;
+                        clicked => { NavActions.open_playlist_detail(pl.id); }
+                        play_clicked => { PlayerActions.play_all_from_list(pl.id); }
+                    }
+                }
+            }
+        }
+
+        if PageDataState.search_tab == "playlists" && PageDataState.search_playlists_row1.length == 0 && PageDataState.search_playlists.length == 0: SEmptyState {
+            vertical-stretch: 1;
+            icon: @image-url("../assets/icons/playlist.svg");
+            title: NavState.search_keyword != "" ? "未找到与 \"" + NavState.search_keyword + "\" 相关的歌单" : "搜索发现精彩主题歌单";
+            description: NavState.search_keyword != "" ? "换个关键词试试，或检查拼写是否正确" : "输入关键词并按回车即可检索歌单";
+        }
+    }
+}

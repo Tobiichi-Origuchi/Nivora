@@ -1,0 +1,211 @@
+import { Theme } from "theme.slint";
+import {
+    PlayerState,
+    NavState,
+    AuthState,
+    LyricState,
+    ThemeState,
+    PageDataState,
+    ToastState,
+} from "app_state.slint";
+import {
+    PlayerActions,
+    NavActions,
+    AuthActions,
+    LyricActions,
+    ThemeActions,
+    LibraryActions,
+    WindowActions,
+} from "app_actions.slint";
+import {
+    TrackUi,
+    PlaylistUi,
+    LyricLineUi,
+    CommentUi,
+} from "types.slint";
+
+import { SideBar } from "components/side_bar.slint";
+import { NavHeader } from "components/nav_header.slint";
+import { PlayerBar } from "components/player_bar.slint";
+import { QueuePopover } from "components/queue_popover.slint";
+import { LyricView } from "components/lyric_view.slint";
+import { ToastOverlay } from "components/toast_overlay.slint";
+
+import { HomeView } from "views/home_view.slint";
+import { DailyView } from "views/daily_view.slint";
+import { LikedView } from "views/liked_view.slint";
+import { PlaylistView } from "views/playlist_view.slint";
+import { LibraryView } from "views/library_view.slint";
+import { SearchView } from "views/search_view.slint";
+import { ArtistView } from "views/artist_view.slint";
+import { StatsView } from "views/stats_view.slint";
+
+import { LoginDialog } from "modals/login_dialog.slint";
+import { EqualizerDialog } from "modals/equalizer_dialog.slint";
+import { CommentDialog } from "modals/comment_dialog.slint";
+import { SettingsDialog } from "modals/settings_dialog.slint";
+
+export {
+    Theme,
+    PlayerState,
+    NavState,
+    AuthState,
+    LyricState,
+    ThemeState,
+    PageDataState,
+    ToastState,
+    PlayerActions,
+    NavActions,
+    AuthActions,
+    LyricActions,
+    ThemeActions,
+    LibraryActions,
+    WindowActions,
+    TrackUi,
+    PlaylistUi,
+    LyricLineUi,
+    CommentUi,
+}
+export component MainWindow inherits Window {
+    title: "Nivora";
+    min-width: 960px;
+    min-height: 640px;
+    preferred-width: 1180px;
+    preferred-height: 760px;
+    background: Theme.app_background;
+
+    main_layout := Rectangle {
+        width: 100%;
+        height: 100%;
+        transform-scale: PlayerState.is_lyric_expanded ? 0.95 : 1.0;
+        opacity: PlayerState.is_lyric_expanded ? 0.0 : 1.0;
+
+        animate transform-scale, opacity {
+            duration: Theme.duration_full_player;
+            easing: cubic-bezier(0.7, 0, 0.3, 1);
+        }
+
+        VerticalLayout {
+            spacing: 0px;
+
+            HorizontalLayout {
+                vertical-stretch: 1;
+                spacing: 0px;
+
+                SideBar { }
+
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    spacing: 0px;
+
+                    NavHeader { }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                        clip: true;
+
+                        if NavState.current_page == "home": HomeView {
+                            width: 100%;
+                            height: 100%;
+                        }
+                        if NavState.current_page == "daily": DailyView {
+                            width: 100%;
+                            height: 100%;
+                        }
+                        if NavState.current_page == "liked": LikedView {
+                            width: 100%;
+                            height: 100%;
+                        }
+                        if NavState.current_page == "playlist": PlaylistView {
+                            width: 100%;
+                            height: 100%;
+                        }
+                        if NavState.current_page == "library": LibraryView {
+                            width: 100%;
+                            height: 100%;
+                        }
+                        if NavState.current_page == "search": SearchView {
+                            width: 100%;
+                            height: 100%;
+                        }
+                        if NavState.current_page == "artist": ArtistView {
+                            width: 100%;
+                            height: 100%;
+                        }
+                        if NavState.current_page == "stats": StatsView {
+                            width: 100%;
+                            height: 100%;
+                        }
+                    }
+                }
+            }
+
+            PlayerBar { }
+        }
+
+        QueuePopover {
+            is_open: PlayerState.is_queue_open;
+            x: parent.width - self.width - 24px;
+            y: parent.height - self.height - 88px;
+            z: 40;
+        }
+    }
+
+    full_player := Rectangle {
+        x: 0;
+        y: PlayerState.is_lyric_expanded ? 0px : root.height;
+        width: 100%;
+        height: 100%;
+        z: 50;
+
+        animate y {
+            duration: Theme.duration_full_player;
+            easing: cubic-bezier(0.7, 0, 0.3, 1);
+        }
+
+        LyricView {
+            width: 100%;
+            height: 100%;
+        }
+    }
+
+    SettingsDialog {
+        is_open: ThemeState.is_settings_open;
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
+        z: 80;
+    }
+
+    EqualizerDialog {
+        is_open: ThemeState.is_equalizer_open;
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
+        z: 85;
+    }
+
+    LoginDialog {
+        is_open: AuthState.is_login_dialog_open;
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
+        z: 90;
+    }
+
+    CommentDialog {
+        is_open: PlayerState.is_comment_open;
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
+        z: 95;
+    }
+
+    ToastOverlay {
+        z: 100;
+    }
+}

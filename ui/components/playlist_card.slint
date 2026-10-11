@@ -1,0 +1,154 @@
+import { Theme } from "../theme.slint";
+import { PlaylistUi } from "../types.slint";
+
+export component PlaylistCard inherits Rectangle {
+    in property <PlaylistUi> playlist;
+    callback clicked();
+    callback play_clicked();
+
+    border-radius: Theme.radius_lg;
+    background: card_touch.has_hover ? Theme.surface_hover : transparent;
+    border-width: 1px;
+    border-color: card_touch.has_hover ? Theme.glass_border_bright : transparent;
+    transform-scale: card_touch.pressed ? 0.98 : (card_touch.has_hover ? 1.01 : 1.0);
+    animate background, border-color, transform-scale {
+        duration: 220ms;
+        easing: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    card_touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+
+    VerticalLayout {
+        padding: 10px;
+        spacing: 10px;
+
+        // 封面矩形区域
+        Rectangle {
+            border-radius: Theme.radius_md;
+            clip: true;
+            background: Theme.surface_container;
+            border-width: 1px;
+            border-color: Theme.glass_border;
+            drop-shadow-offset-y: card_touch.has_hover ? 8px : 3px;
+            drop-shadow-blur: card_touch.has_hover ? 16px : 8px;
+            drop-shadow-color: Theme.shadow_subtle;
+            animate drop-shadow-blur, drop-shadow-offset-y { duration: 250ms; }
+
+            if root.playlist.has_cover: Image {
+                width: 100%;
+                height: 100%;
+                source: root.playlist.cover_image;
+                image-fit: cover;
+                transform-scale: card_touch.has_hover ? 1.06 : 1.0;
+                animate transform-scale {
+                    duration: 300ms;
+                    easing: cubic-bezier(0.16, 1, 0.3, 1);
+                }
+            }
+            if !root.playlist.has_cover: Image {
+                width: 44px;
+                height: 44px;
+                source: @image-url("../assets/icons/playlist.svg");
+                colorize: Theme.text_muted;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+
+            // 悬浮变暗背景蒙层
+            Rectangle {
+                width: 100%;
+                height: 100%;
+                background: #000000.with_alpha(card_touch.has_hover ? 20% : 0%);
+                animate background { duration: 200ms; }
+            }
+
+            // 右上角播放量徽标
+            if root.playlist.play_count_str != "": Rectangle {
+                x: parent.width - self.width - 6px;
+                y: 6px;
+                height: 20px;
+                border-radius: Theme.radius_full;
+                background: #000000.with_alpha(65%);
+                HorizontalLayout {
+                    padding-left: 6px;
+                    padding-right: 6px;
+                    spacing: 4px;
+                    alignment: center;
+                    Image {
+                        width: 11px;
+                        height: 11px;
+                        source: @image-url("../assets/icons/play.svg");
+                        colorize: #ffffff;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    Text {
+                        text: root.playlist.play_count_str;
+                        color: #ffffff;
+                        font-size: 10.5px;
+                        font-weight: 500;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            // 右下角悬浮圆形播放浮钮
+            Rectangle {
+                x: parent.width - self.width - 8px;
+                y: card_touch.has_hover ? parent.height - self.height - 8px : parent.height;
+                width: 38px;
+                height: 38px;
+                border-radius: Theme.radius_full;
+                background: @linear-gradient(135deg, Theme.primary.brighter(12%) 0%, Theme.primary 100%);
+                drop-shadow-offset-y: 4px;
+                drop-shadow-blur: 12px;
+                drop-shadow-color: Theme.primary.with_alpha(50%);
+                opacity: card_touch.has_hover ? 1.0 : 0.0;
+                transform-scale: play_touch.pressed ? 0.90 : 1.0;
+                animate opacity, y, transform-scale {
+                    duration: 220ms;
+                    easing: cubic-bezier(0.16, 1, 0.3, 1);
+                }
+
+                play_touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.play_clicked();
+                    }
+                }
+
+                Image {
+                    width: 16px;
+                    height: 16px;
+                    source: @image-url("../assets/icons/play.svg");
+                    colorize: Theme.on_primary;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+        }
+
+        // 歌单标题
+        Text {
+            text: root.playlist.title != "" ? root.playlist.title : "精选歌单";
+            color: card_touch.has_hover ? Theme.primary : Theme.text_primary;
+            font-size: 13.5px;
+            font-weight: 600;
+            overflow: elide;
+            wrap: word-wrap;
+            height: 36px;
+            animate color { duration: 150ms; }
+        }
+
+        // 辅助信息
+        Text {
+            text: root.playlist.creator_name != "" ? root.playlist.creator_name : (root.playlist.track_count > 0 ? "\{root.playlist.track_count} 首单曲" : "");
+            color: Theme.text_muted;
+            font-size: 11.5px;
+            overflow: elide;
+        }
+    }
+}
