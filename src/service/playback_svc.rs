@@ -372,7 +372,11 @@ impl PlaybackService {
   /// 设置音量
   pub fn set_volume(ctx: &AppContext, vol: f32) {
     ctx.player.lock().set_volume(vol);
-    ctx.state.write().volume = vol;
+    {
+      let mut state = ctx.state.write();
+      state.volume = vol;
+      state.volume_before_mute = None;
+    }
     if let Err(e) = crate::data::SettingsRepo::set(&ctx.db, "volume", &vol.to_string()) {
       tracing::warn!("持久化音量设置失败: {e}");
     }
@@ -380,23 +384,23 @@ impl PlaybackService {
     let _ = ctx.event_tx.send(AppEvent::VolumeChanged(vol));
   }
 
-  /// 静音切换
+  /// 静音切换。
   pub fn toggle_mute(ctx: &AppContext) {
-    let mut p = ctx.player.lock();
-    let current_vol = ctx.state.read().volume;
-    if current_vol > 0.0 {
-      p.set_volume(0.0);
-      if let Err(e) = crate::data::SettingsRepo::set(&ctx.db, "volume", "0.0") {
-        tracing::warn!("持久化静音设置失败: {e}");
-      }
+    let (current_vol, muted) = {
+      let state = ctx.state.read();
+      (state.volume, state.volume_before_mute.is_some())
+    };
+    if !muted && current_vol > 0.0 {
+      ctx.state.write().volume_before_mute = Some(current_vol);
+      ctx.player.lock().set_volume(0.0);
       let _ = ctx.event_tx.send(AppEvent::VolumeChanged(0.0));
     } else {
-      p.set_volume(0.8);
-      ctx.state.write().volume = 0.8;
-      if let Err(e) = crate::data::SettingsRepo::set(&ctx.db, "volume", "0.8") {
-        tracing::warn!("持久化恢复音量设置失败: {e}");
-      }
-      let _ = ctx.event_tx.send(AppEvent::VolumeChanged(0.8));
+      let restore = {
+        let mut state = ctx.state.write();
+        let saved = state.volume_before_mute.take().unwrap_or(state.volume);
+        if saved > 0.0 { saved } else { 0.8 }
+      };
+      Self::set_volume(ctx, restore);
     }
   }
 
@@ -478,26 +482,44 @@ impl PlaybackService {
   /// 设置均衡器增益
   pub fn set_eq_gain_flow(ctx: &AppContext, band: usize, gain: f32) {
     ctx.player.lock().set_eq_gain(band, gain);
-    let gains = {
+    let gains = ctx.player.lock().equalizer_params().load_gains().to_vec();
+    // TODO: "自定义" 改为 Option<EqPreset>::None。
+    let preset_name = crate::engine::CUSTOM_EQ_PRESET_NAME.to_string();
+    {
       let mut cfg = ctx.config.lock();
-      if cfg.eq_gains.len() <= band {
-        cfg.eq_gains.resize(10, 0.0);
-      }
-      cfg.eq_gains[band] = gain;
-      cfg.eq_gains.clone()
-    };
+      cfg.eq_gains = gains.clone();
+      cfg.eq_preset = preset_name.clone();
+    }
     if let Err(e) = crate::data::SettingsRepo::set_json(&ctx.db, "eq_gains", &gains) {
       tracing::warn!("持久化保存均衡器增益失败: {e}");
     }
+    if let Err(e) = crate::data::SettingsRepo::set(&ctx.db, "eq_preset", &preset_name) {
+      tracing::warn!("持久化保存均衡器预设失败: {e}");
+    }
+    let _ = ctx
+      .event_tx
+      .send(AppEvent::EqualizerChanged { preset_name, gains });
   }
 
   /// 设置均衡器预设
   pub fn set_eq_preset_flow(ctx: &AppContext, preset: String) {
     ctx.player.lock().set_eq_preset(&preset);
+    let gains = ctx.player.lock().equalizer_params().load_gains().to_vec();
     if let Err(e) = crate::data::SettingsRepo::set(&ctx.db, "eq_preset", &preset) {
       tracing::warn!("持久化保存均衡器预设失败: {e}");
     }
-    ctx.config.lock().eq_preset = preset;
+    if let Err(e) = crate::data::SettingsRepo::set_json(&ctx.db, "eq_gains", &gains) {
+      tracing::warn!("持久化保存均衡器增益失败: {e}");
+    }
+    {
+      let mut cfg = ctx.config.lock();
+      cfg.eq_preset = preset.clone();
+      cfg.eq_gains = gains.clone();
+    }
+    let _ = ctx.event_tx.send(AppEvent::EqualizerChanged {
+      preset_name: preset,
+      gains,
+    });
   }
 
   /// 切换至上一曲编排

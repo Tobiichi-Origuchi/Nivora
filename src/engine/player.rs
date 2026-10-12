@@ -15,6 +15,24 @@ use super::visualizer::{FftVisualizer, SPECTRUM_BANDS};
 use crate::common::error::{AppError, AppResult};
 use crate::common::types::PlayerState;
 
+/// 手动拖动增益后写入的展示名
+// TODO: 删除。手动增益改为 Option<EqPreset>::None。
+pub const CUSTOM_EQ_PRESET_NAME: &str = "自定义";
+
+/// 把 UI 展示文案或英文 id 解析为预设。
+// TODO: 删除。调用方改为直接传 EqPreset。
+fn eq_preset_from_name(preset_name: &str) -> Option<EqPreset> {
+  match preset_name.trim().to_lowercase().as_str() {
+    "平直 (flat)" | "flat" => Some(EqPreset::Flat),
+    "流行 (pop)" | "pop" => Some(EqPreset::Pop),
+    "摇滚 (rock)" | "rock" => Some(EqPreset::Rock),
+    "古典 (classical)" | "classical" => Some(EqPreset::Classical),
+    "人声 (vocal)" | "vocal" => Some(EqPreset::Vocal),
+    "bassboost" | "bass_boost" | "bass" => Some(EqPreset::BassBoost),
+    _ => None,
+  }
+}
+
 const DEFAULT_CHANNELS: NonZeroU16 = match NonZeroU16::new(2) {
   Some(v) => v,
   None => unreachable!(),
@@ -560,13 +578,10 @@ impl InnerPlayer {
 
   /// 应用均衡器预设
   pub fn set_eq_preset(&mut self, preset_name: &str) {
-    let preset = match preset_name.to_lowercase().as_str() {
-      "pop" => EqPreset::Pop,
-      "rock" => EqPreset::Rock,
-      "classical" => EqPreset::Classical,
-      "vocal" => EqPreset::Vocal,
-      "bassboost" | "bass_boost" | "bass" => EqPreset::BassBoost,
-      _ => EqPreset::Flat,
+    let Some(preset) = eq_preset_from_name(preset_name) else {
+      tracing::warn!("未识别的均衡器预设 {preset_name:?}");
+      self.equalizer_params.apply_preset(EqPreset::Flat);
+      return;
     };
     self.equalizer_params.apply_preset(preset);
   }

@@ -10,7 +10,7 @@ pub mod visualizer;
 pub use decoder::AudioDecoder;
 pub use equalizer::{EQ_BAND_FREQS, EqPreset, Equalizer, EqualizerParams};
 pub use loudness::OutputLimiter;
-pub use player::InnerPlayer;
+pub use player::{CUSTOM_EQ_PRESET_NAME, InnerPlayer};
 pub use sink::AudioSink;
 pub use source::{AudioSourceStream, fetch_http_stream, open_file_source, open_memory_source};
 pub use tempo::{TempoParams, TempoProcessor};

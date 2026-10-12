@@ -137,6 +137,11 @@ pub enum AppEvent {
   SidebarToggled(bool),
   /// 均衡器面板开关
   EqualizerToggled(bool),
+  // TODO: preset_name 改为 Option<EqPreset>
+  EqualizerChanged {
+    preset_name: String,
+    gains: Vec<f32>,
+  },
   /// 设置弹窗开关
   SettingsToggled(bool),
   /// 登录弹窗开关

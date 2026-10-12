@@ -16,6 +16,8 @@ pub struct AppState {
   pub duration_ms: u64,
   /// 当前音量 (0.0 ~ 1.0)
   pub volume: f32,
+  /// 静音前的音量。`Some` 表示当前处于静音会话。
+  pub volume_before_mute: Option<f32>,
   /// 当前循环模式
   pub play_mode: PlayMode,
   /// 当前登录用户信息 (None 为未登录)
@@ -73,6 +75,7 @@ impl Default for AppState {
       position_ms: 0,
       duration_ms: 0,
       volume: 0.8,
+      volume_before_mute: None,
       play_mode: PlayMode::Sequence,
       current_user: None,
       current_page: NavPage::Home,

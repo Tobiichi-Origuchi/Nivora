@@ -8,7 +8,8 @@ pub mod sync_theme;
 pub mod sync_user;
 
 use parking_lot::RwLock;
-use slint::{ComponentHandle, Weak};
+use slint::{ComponentHandle, VecModel, Weak};
+use std::rc::Rc;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
@@ -502,6 +503,11 @@ impl AppBridge {
       AppEvent::EqualizerToggled(val) => {
         ui.global::<crate::bridge::ThemeState>()
           .set_is_equalizer_open(val);
+      }
+      AppEvent::EqualizerChanged { preset_name, gains } => {
+        let page_data = ui.global::<PageDataState>();
+        page_data.set_eq_preset_name(preset_name.into());
+        page_data.set_eq_gains(Rc::new(VecModel::from(gains)).into());
       }
       AppEvent::SettingsToggled(val) => {
         ui.global::<crate::bridge::ThemeState>()

@@ -73,7 +73,8 @@ fn main() {
   // 5. 初始化音频引擎与全局状态容器
   let player = Arc::new(Mutex::new(InnerPlayer::new()));
   player.lock().set_volume(initial_vol);
-  if !initial_eq_preset.is_empty() {
+  if !initial_eq_preset.is_empty() && initial_eq_preset != nivora_lib::engine::CUSTOM_EQ_PRESET_NAME
+  {
     player.lock().set_eq_preset(&initial_eq_preset);
   }
   for (band, gain) in initial_eq_gains.iter().enumerate() {
@@ -288,10 +289,17 @@ fn main() {
     let nav_state = ui.global::<nivora_lib::bridge::NavState>();
     nav_state.set_sidebar_collapsed(initial_sidebar);
 
-    // 9.4 均衡器预设显示
-    if !initial_eq_preset.is_empty() {
+    // 9.4 均衡器预设与增益
+    {
       let page_data = ui.global::<nivora_lib::bridge::PageDataState>();
-      page_data.set_eq_preset_name(initial_eq_preset.into());
+      if !initial_eq_preset.is_empty() {
+        page_data.set_eq_preset_name(initial_eq_preset.into());
+      }
+      let mut gains = initial_eq_gains;
+      if gains.len() != 10 {
+        gains.resize(10, 0.0);
+      }
+      page_data.set_eq_gains(std::rc::Rc::new(slint::VecModel::from(gains)).into());
     }
   }
 
@@ -313,9 +321,9 @@ fn main() {
   player.lock().stop();
 
   // 持久化当前播放状态
-  let current_vol = ui.global::<nivora_lib::bridge::PlayerState>().get_volume();
-  let _ = nivora_lib::data::SettingsRepo::set(&db, "playback_volume", &current_vol.to_string());
-  let current_queue = state.read().queue.clone();
+  let current_vol = state.read().volume;
+  let _ = nivora_lib::data::SettingsRepo::set(&db, "volume", &current_vol.to_string());
+  let current_queue = playback_queue.lock().queue().to_vec();
   let _ = nivora_lib::data::SettingsRepo::set_json(&db, "playback_queue", &current_queue);
 
   if let Err(e) = db.checkpoint() {
