@@ -1,3 +1,4 @@
+use parking_lot::Mutex;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use tokio::sync::mpsc;
@@ -13,11 +14,11 @@ use crate::service::{
 #[derive(Clone)]
 pub struct ActionDispatcher {
   pub ctx: AppContext,
-  pub qr_polling_cancel: Arc<AtomicBool>,
+  pub qr_polling_cancel: Arc<Mutex<Option<Arc<AtomicBool>>>>,
 }
 
 impl ActionDispatcher {
-  pub fn new(ctx: AppContext, qr_polling_cancel: Arc<AtomicBool>) -> Self {
+  pub fn new(ctx: AppContext, qr_polling_cancel: Arc<Mutex<Option<Arc<AtomicBool>>>>) -> Self {
     Self {
       ctx,
       qr_polling_cancel,

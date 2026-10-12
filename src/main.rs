@@ -2,7 +2,6 @@ use chrono::Datelike;
 use parking_lot::{Mutex, RwLock};
 use slint::ComponentHandle;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 use tokio::sync::mpsc;
 use tracing::info;
 
@@ -115,7 +114,7 @@ fn main() {
     AudioQualityLevel::HiRes => ("hires", "Hi-Res"),
   };
   let quality_level = Arc::new(Mutex::new(initial_q_str.to_string()));
-  let qr_polling_cancel = Arc::new(AtomicBool::new(false));
+  let qr_polling_cancel = Arc::new(Mutex::new(None));
   let current_extracted_color = Arc::new(Mutex::new(None::<[u8; 4]>));
 
   // 6. 初始数据预加载

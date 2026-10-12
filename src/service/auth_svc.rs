@@ -1,3 +1,4 @@
+use parking_lot::Mutex;
 use qrcode::QrCode;
 use qrcode::render::svg;
 use std::sync::Arc;
@@ -28,16 +29,16 @@ impl AuthService {
   /// 认证领域动作统一调度入口
   pub fn dispatch(
     client: &NcmClient,
-    cancel_token: Arc<AtomicBool>,
+    cancel_slot: Arc<Mutex<Option<Arc<AtomicBool>>>>,
     event_tx: mpsc::UnboundedSender<AppEvent>,
     action: UiAction,
   ) {
     match action {
       UiAction::OpenLoginModal | UiAction::RefreshQr => {
-        Self::open_or_refresh_qr(client, cancel_token, event_tx);
+        Self::open_or_refresh_qr(client, cancel_slot, event_tx);
       }
       UiAction::CloseLoginModal => {
-        Self::close_login_modal(&cancel_token, &event_tx);
+        Self::close_login_modal(&cancel_slot, &event_tx);
       }
       UiAction::Logout => {
         Self::logout(client, event_tx);
@@ -49,29 +50,31 @@ impl AuthService {
   /// 打开或刷新扫码登录二维码
   pub fn open_or_refresh_qr(
     client: &NcmClient,
-    cancel_token: Arc<AtomicBool>,
+    cancel_slot: Arc<Mutex<Option<Arc<AtomicBool>>>>,
     event_tx: mpsc::UnboundedSender<AppEvent>,
   ) {
     info!("生成扫码登录二维码");
     let _ = event_tx.send(AppEvent::LoginModalToggled(true));
-    cancel_token.store(true, Ordering::SeqCst);
+    let cancel = replace_qr_cancel(&cancel_slot);
 
     let client = client.clone();
     let ev_tx = event_tx.clone();
-    let cancel = cancel_token.clone();
 
     tokio::spawn(async move {
-      tokio::time::sleep(Duration::from_millis(50)).await;
-      cancel.store(false, Ordering::SeqCst);
-
       let _ = ev_tx.send(AppEvent::QrStatusChanged(
         "正在生成登录二维码...".to_string(),
       ));
       match client.auth().create_qr_key().await {
         Ok(key) => {
+          if qr_cancelled(&cancel) {
+            return;
+          }
           let qr_url = client.auth().get_qr_url(&key);
           match Self::generate_qr_svg(&qr_url) {
             Ok(svg) => {
+              if qr_cancelled(&cancel) {
+                return;
+              }
               let _ = ev_tx.send(AppEvent::QrCodeGenerated {
                 svg_data: svg,
                 key: key.clone(),
@@ -80,15 +83,18 @@ impl AuthService {
                 "请使用网易云音乐 App 扫码登录".to_string(),
               ));
 
-              // 启动 2s 轮询任务 (最多 150 次 = 300 秒超时保护)
+              // 每 2 秒轮询一次，最多 150 次（300 秒）
               let mut poll_count = 0;
               loop {
                 tokio::time::sleep(Duration::from_secs(2)).await;
-                if cancel.load(Ordering::SeqCst) {
+                if qr_cancelled(&cancel) {
                   break;
                 }
                 poll_count += 1;
                 if poll_count >= 150 {
+                  if qr_cancelled(&cancel) {
+                    break;
+                  }
                   let _ = ev_tx.send(AppEvent::QrStatusChanged(
                     "二维码已过期，请点击刷新".to_string(),
                   ));
@@ -96,39 +102,56 @@ impl AuthService {
                 }
 
                 match client.auth().check_qr_status(&key).await {
-                  Ok(QrCodeStatus::WaitingForScan) => {
-                    let _ = ev_tx.send(AppEvent::QrStatusChanged(
-                      "请使用网易云音乐 App 扫码登录".to_string(),
-                    ));
-                  }
-                  Ok(QrCodeStatus::WaitingForConfirm) => {
-                    let _ = ev_tx.send(AppEvent::QrStatusChanged(
-                      "已扫码，请在手机端确认授权".to_string(),
-                    ));
-                  }
-                  Ok(QrCodeStatus::Success) => {
-                    let _ = ev_tx.send(AppEvent::QrStatusChanged(
-                      "授权成功，正在同步账号资料...".to_string(),
-                    ));
-                    if let Ok(Some(profile)) = client.auth().get_login_status().await {
-                      let _ = ev_tx.send(AppEvent::UserChanged(Some(profile)));
+                  Ok(status) => {
+                    if qr_cancelled(&cancel) {
+                      break;
                     }
-                    tokio::time::sleep(Duration::from_millis(600)).await;
-                    let _ = ev_tx.send(AppEvent::LoginModalToggled(false));
-                    break;
+                    match status {
+                      QrCodeStatus::WaitingForScan => {
+                        let _ = ev_tx.send(AppEvent::QrStatusChanged(
+                          "请使用网易云音乐 App 扫码登录".to_string(),
+                        ));
+                      }
+                      QrCodeStatus::WaitingForConfirm => {
+                        let _ = ev_tx.send(AppEvent::QrStatusChanged(
+                          "已扫码，请在手机端确认授权".to_string(),
+                        ));
+                      }
+                      QrCodeStatus::Success => {
+                        let _ = ev_tx.send(AppEvent::QrStatusChanged(
+                          "授权成功，正在同步账号资料...".to_string(),
+                        ));
+                        if let Ok(Some(profile)) = client.auth().get_login_status().await {
+                          if qr_cancelled(&cancel) {
+                            break;
+                          }
+                          let _ = ev_tx.send(AppEvent::UserChanged(Some(profile)));
+                        }
+                        tokio::time::sleep(Duration::from_millis(600)).await;
+                        if qr_cancelled(&cancel) {
+                          break;
+                        }
+                        let _ = ev_tx.send(AppEvent::LoginModalToggled(false));
+                        break;
+                      }
+                      QrCodeStatus::Expired => {
+                        let _ = ev_tx.send(AppEvent::QrStatusChanged(
+                          "二维码已过期，请点击刷新".to_string(),
+                        ));
+                        break;
+                      }
+                      QrCodeStatus::Unknown(_) => {}
+                    }
                   }
-                  Ok(QrCodeStatus::Expired) => {
-                    let _ = ev_tx.send(AppEvent::QrStatusChanged(
-                      "二维码已过期，请点击刷新".to_string(),
-                    ));
-                    break;
-                  }
-                  _ => {}
+                  Err(_) => {}
                 }
               }
             }
             Err(e) => {
               tracing::warn!("渲染二维码失败: {e}");
+              if qr_cancelled(&cancel) {
+                return;
+              }
               let _ = ev_tx.send(AppEvent::QrStatusChanged(
                 "生成二维码图像失败，请点击刷新".to_string(),
               ));
@@ -137,6 +160,9 @@ impl AuthService {
         }
         Err(e) => {
           tracing::warn!("创建登录二维码 Key 失败: {e}");
+          if qr_cancelled(&cancel) {
+            return;
+          }
           let _ = ev_tx.send(AppEvent::QrStatusChanged(
             "获取二维码失败，请点击刷新".to_string(),
           ));
@@ -146,8 +172,11 @@ impl AuthService {
   }
 
   /// 关闭扫码登录弹窗
-  pub fn close_login_modal(cancel_token: &AtomicBool, event_tx: &mpsc::UnboundedSender<AppEvent>) {
-    cancel_token.store(true, Ordering::SeqCst);
+  pub fn close_login_modal(
+    cancel_slot: &Mutex<Option<Arc<AtomicBool>>>,
+    event_tx: &mpsc::UnboundedSender<AppEvent>,
+  ) {
+    cancel_qr(cancel_slot);
     let _ = event_tx.send(AppEvent::LoginModalToggled(false));
   }
 
@@ -160,4 +189,26 @@ impl AuthService {
       let _ = event_tx.send(AppEvent::UserChanged(None));
     });
   }
+}
+
+/// 作废上一份标志并装入一份新的
+fn replace_qr_cancel(slot: &Mutex<Option<Arc<AtomicBool>>>) -> Arc<AtomicBool> {
+  let mut guard = slot.lock();
+  if let Some(prev) = guard.take() {
+    prev.store(true, Ordering::SeqCst);
+  }
+  let next = Arc::new(AtomicBool::new(false));
+  *guard = Some(next.clone());
+  next
+}
+
+/// 作废当前标志
+fn cancel_qr(slot: &Mutex<Option<Arc<AtomicBool>>>) {
+  if let Some(prev) = slot.lock().take() {
+    prev.store(true, Ordering::SeqCst);
+  }
+}
+
+fn qr_cancelled(flag: &AtomicBool) -> bool {
+  flag.load(Ordering::SeqCst)
 }
