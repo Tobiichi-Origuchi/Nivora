@@ -43,7 +43,15 @@ impl LyricTimeline {
 
   /// 根据当前播放时间定位激活的歌词行索引
   pub fn find_active_index(&self, current_time: u64) -> Option<usize> {
-    let current_time = (current_time as i64 + *self.offset_ms.read()).max(0) as u64;
+    self.index_at(self.adjusted_ms(current_time))
+  }
+
+  fn adjusted_ms(&self, current_time: u64) -> u64 {
+    (current_time as i64 + *self.offset_ms.read()).max(0) as u64
+  }
+
+  // TODO: 换成 `slice::partition_point`，并删除 `last_index`
+  fn index_at(&self, current_time: u64) -> Option<usize> {
     if self.lines.is_empty() {
       return None;
     }
@@ -107,7 +115,7 @@ impl LyricTimeline {
 
   /// 获取指定行当前的发音进度与激活单词进度 (0.0 .. 1.0)
   pub fn word_progress(&self, line_index: usize, current_time: u64) -> f32 {
-    let current_time = (current_time as i64 + *self.offset_ms.read()).max(0) as u64;
+    let current_time = self.adjusted_ms(current_time);
     if let Some(line) = self.lines.get(line_index) {
       let (_, progress) = line.active_word_index_and_progress(current_time);
       progress
@@ -118,7 +126,7 @@ impl LyricTimeline {
 
   /// 获取指定行当前整行音节加权高精度发音累计进度 (0.0 .. 1.0)
   pub fn line_progress(&self, line_index: usize, current_time: u64) -> f32 {
-    let current_time = (current_time as i64 + *self.offset_ms.read()).max(0) as u64;
+    let current_time = self.adjusted_ms(current_time);
     if let Some(line) = self.lines.get(line_index) {
       line.line_progress(current_time)
     } else {
@@ -128,7 +136,7 @@ impl LyricTimeline {
 
   /// 检测当前时间是否处于歌曲长间奏或前奏中，并计算呼吸倒计时圆点
   pub fn detect_interlude(&self, current_time: u64) -> InterludeState {
-    let current_time = (current_time as i64 + *self.offset_ms.read()).max(0) as u64;
+    let current_time = self.adjusted_ms(current_time);
     if self.lines.is_empty() {
       return InterludeState::default();
     }
@@ -151,7 +159,7 @@ impl LyricTimeline {
     }
 
     // 2. 检查段落间奏 (当前行结束时间与下一行开始时间间隔 >= 5 秒)
-    if let Some(active_idx) = self.find_active_index(current_time) {
+    if let Some(active_idx) = self.index_at(current_time) {
       let current_line = &self.lines[active_idx];
       if current_time >= current_line.end_time && active_idx + 1 < self.lines.len() {
         let next_start = self.lines[active_idx + 1].start_time;
