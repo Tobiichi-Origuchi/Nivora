@@ -122,6 +122,7 @@ fn main() {
   let init_db = db.clone();
   let init_ev_tx = event_tx.clone();
   let init_state = state.clone();
+  let init_scrobble = scrobble_svc.clone();
   rt.spawn(async move {
     let now = chrono::Local::now();
     let day = format!("{:02}", now.day());
@@ -145,6 +146,7 @@ fn main() {
     if let Ok(Some(user)) = init_client.auth().get_login_status().await {
       info!("已恢复登录会话: {}", user.nickname);
       let _ = init_ev_tx.send(AppEvent::UserChanged(Some(user)));
+      init_scrobble.flush_unsynced_scrobbles().await;
     }
 
     // 读取用户听歌统计与问候语
@@ -254,6 +256,7 @@ fn main() {
   let dispatcher = ActionDispatcher::new(app_ctx, qr_polling_cancel.clone());
   dispatcher.clone().spawn(&rt, action_rx);
   dispatcher.spawn_playback_ticker(&rt);
+  scrobble_svc.clone().spawn_flush_interval(&rt);
 
   // 8. 初始化 Slint UI 窗口并桥接
   let ui = MainWindow::new().expect("无法创建 Slint 主窗口");
@@ -315,6 +318,7 @@ fn main() {
   ui.run().expect("Slint UI 异常退出");
 
   // 12. 关闭应用
+  rt.block_on(scrobble_svc.flush_unsynced_scrobbles());
 
   // 停止音频播放并释放硬件设备
   player.lock().stop();

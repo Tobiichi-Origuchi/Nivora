@@ -769,8 +769,14 @@ impl PlaybackService {
         let key = track_id.clone();
         let ext_c = ext_color.clone();
         let std = st.clone();
+        let pt_cover = pt_counter.clone();
+        let token_cover = play_token;
         tokio::spawn(async move {
           if let Some((path, accent_color)) = CoverService::load_cover(&target, &key).await {
+            // TODO: play_token 比较收成一个代数守卫。
+            if pt_cover.load(Ordering::SeqCst) != token_cover {
+              return;
+            }
             *ext_c.lock() = Some([
               accent_color.alpha(),
               accent_color.red(),
@@ -796,6 +802,7 @@ impl PlaybackService {
           .unwrap_or(0);
           st.write().duration_ms = dur;
           st.write().player_state = PlayerState::Playing;
+          scrobble.on_track_started(track_meta.clone(), None);
           let _ = ev_tx.send(AppEvent::PlayerStateChanged(PlayerState::Playing));
           let _ = ev_tx.send(AppEvent::ProgressUpdated {
             position_ms: 0,
@@ -813,6 +820,8 @@ impl PlaybackService {
       let client_lyric = client.clone();
       let ev_tx_lyric = ev_tx.clone();
       let db_lyric = db.clone();
+      let pt_lyric = pt_counter.clone();
+      let token_lyric = play_token;
 
       tokio::spawn(async move {
         let (lrc, yrc, trans) =
@@ -824,6 +833,10 @@ impl PlaybackService {
             trans.as_deref(),
             None,
           );
+          // TODO: play_token 比较收成一个代数守卫。
+          if pt_lyric.load(Ordering::SeqCst) != token_lyric {
+            return;
+          }
           *lyric_timeline_worker.write() = LyricTimeline::new(lines.clone());
           let _ = ev_tx_lyric.send(AppEvent::LyricsLoaded(lines));
         }
@@ -835,7 +848,8 @@ impl PlaybackService {
         .iter()
         .find(|t| t.id == track_id)
         .cloned();
-      if let Some(meta) = cur_meta {
+      let known_track = cur_meta.clone();
+      let detail_rx = if let Some(meta) = cur_meta {
         p_svc.lock().play_track(meta.clone());
         st.write().current_track = Some(meta.clone());
         let is_liked = st.read().liked_songs.iter().any(|t| t.id == meta.id);
@@ -851,8 +865,13 @@ impl PlaybackService {
           let key = track_id.clone();
           let ext_c = ext_color.clone();
           let std = st.clone();
+          let pt_cover = pt_counter.clone();
+          let token_cover = play_token;
           tokio::spawn(async move {
             if let Some((path, accent_color)) = CoverService::load_cover(&cover, &key).await {
+              if pt_cover.load(Ordering::SeqCst) != token_cover {
+                return;
+              }
               *ext_c.lock() = Some([
                 accent_color.alpha(),
                 accent_color.red(),
@@ -866,6 +885,7 @@ impl PlaybackService {
             }
           });
         }
+        None
       } else {
         let client_detail = client.clone();
         let track_id_detail = track_id.clone();
@@ -873,6 +893,9 @@ impl PlaybackService {
         let p_svc_detail = p_svc.clone();
         let ext_c = ext_color.clone();
         let std = st.clone();
+        let pt_detail = pt_counter.clone();
+        let token_detail = play_token;
+        let (track_tx, track_rx) = tokio::sync::oneshot::channel();
         tokio::spawn(async move {
           if let Ok(details) = client_detail
             .song()
@@ -880,6 +903,10 @@ impl PlaybackService {
             .await
             && let Some(track) = details.into_iter().next()
           {
+            if pt_detail.load(Ordering::SeqCst) != token_detail {
+              return;
+            }
+            let _ = track_tx.send(track.clone());
             p_svc_detail.lock().play_track(track.clone());
             std.write().current_track = Some(track.clone());
             let is_liked = std.read().liked_songs.iter().any(|t| t.id == track.id);
@@ -895,8 +922,13 @@ impl PlaybackService {
               let key = track_id_detail.clone();
               let ext_sub = ext_c.clone();
               let std_sub = std.clone();
+              let pt_cover = pt_detail.clone();
+              let token_cover = token_detail;
               tokio::spawn(async move {
                 if let Some((path, accent_color)) = CoverService::load_cover(&cover, &key).await {
+                  if pt_cover.load(Ordering::SeqCst) != token_cover {
+                    return;
+                  }
                   *ext_sub.lock() = Some([
                     accent_color.alpha(),
                     accent_color.red(),
@@ -912,7 +944,8 @@ impl PlaybackService {
             }
           }
         });
-      }
+        Some(track_rx)
+      };
 
       let cancel_flag_task = cancel_flag.clone();
       tokio::spawn(async move {
@@ -952,10 +985,20 @@ impl PlaybackService {
                 st.write().duration_ms = duration_ms;
                 st.write().player_state = PlayerState::Playing;
 
-                let cur_track = p_svc.lock().current_track().cloned();
-                if let Some(track) = cur_track {
+                if let Some(track) = known_track.clone() {
                   let _ = ev_tx.send(AppEvent::TrackChanged(Some(track.clone())));
                   scrobble.on_track_started(track, None);
+                } else if let Some(rx) = detail_rx {
+                  let scrobble_wait = scrobble.clone();
+                  let pt_wait = pt_counter.clone();
+                  let token_wait = play_token;
+                  tokio::spawn(async move {
+                    if let Ok(track) = rx.await
+                      && pt_wait.load(Ordering::SeqCst) == token_wait
+                    {
+                      scrobble_wait.on_track_started(track, None);
+                    }
+                  });
                 }
 
                 let _ = ev_tx.send(AppEvent::PlayerStateChanged(PlayerState::Playing));

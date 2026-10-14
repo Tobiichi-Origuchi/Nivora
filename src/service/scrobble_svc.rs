@@ -1,5 +1,6 @@
 use parking_lot::Mutex;
 use std::sync::Arc;
+use std::time::Duration;
 use tracing::{debug, info};
 
 use crate::api::NcmClient;
@@ -94,48 +95,58 @@ impl ScrobbleService {
 
       if !session.scrobbled && (reaches_half || reaches_30s) {
         session.scrobbled = true;
-        let track = session.track.clone();
-        let source_id = session.source_id.clone();
-        let time_secs = (session.total_listened_ms / 1000) as i64;
-        let total_ms = session.total_listened_ms;
-        Some((track, source_id, time_secs, total_ms))
+        // 本地足迹只在切歌时写一次。这里只发起网易云打卡。
+        if session.track.source == TrackSource::Ncm {
+          let track = session.track.clone();
+          let source_id = session.source_id.clone();
+          let time_secs = (session.total_listened_ms / 1000) as i64;
+          Some((track, source_id, time_secs))
+        } else {
+          None
+        }
       } else {
         None
       }
     };
 
-    if let Some((track, source_id, time_secs, total_ms)) = scrobble_request {
-      // 1. 记录到本地
-      let db_c = self.db.clone();
-      let tr_c = track.clone();
-      let _ =
-        tokio::task::spawn_blocking(move || HistoryRepo::record_play(&db_c, &tr_c, total_ms)).await;
-
-      // 2. 若为网易云曲目且已登录，调用打卡接口
-      if track.source == TrackSource::Ncm {
-        info!(
-          "单曲 [{}] 播放达标，触发网易云打卡 (时长 {} 秒)",
-          track.title, time_secs
-        );
-        let client = self.client.clone();
-        let track_id = track.id.clone();
-        let pending = self.pending_scrobbles.clone();
-        let src_id = source_id.clone();
-        tokio::spawn(async move {
-          if let Err(err) = client.song().scrobble(&track_id, &src_id, time_secs).await {
-            debug!("网易云打卡接口返回提示，加入待重试队列: {err}");
-            let mut guard = pending.lock();
-            guard.push(UnsyncedScrobble {
-              track_id,
-              source_id: src_id,
-              time_secs,
-            });
-          }
-        });
-      }
+    if let Some((track, source_id, time_secs)) = scrobble_request {
+      info!(
+        "单曲 [{}] 播放达标，触发网易云打卡 (时长 {} 秒)",
+        track.title, time_secs
+      );
+      let client = self.client.clone();
+      let track_id = track.id.clone();
+      let pending = self.pending_scrobbles.clone();
+      tokio::spawn(async move {
+        if let Err(err) = client
+          .song()
+          .scrobble(&track_id, &source_id, time_secs)
+          .await
+        {
+          debug!("网易云打卡接口返回提示，加入待重试队列: {err}");
+          let mut guard = pending.lock();
+          guard.push(UnsyncedScrobble {
+            track_id,
+            source_id,
+            time_secs,
+          });
+        }
+      });
     }
 
     Ok(())
+  }
+
+  /// 每 60 秒重试失败的网易云打卡
+  pub fn spawn_flush_interval(self, rt: &tokio::runtime::Runtime) {
+    rt.spawn(async move {
+      let mut interval = tokio::time::interval(Duration::from_secs(60));
+      interval.tick().await;
+      loop {
+        interval.tick().await;
+        self.flush_unsynced_scrobbles().await;
+      }
+    });
   }
 
   /// 重试同步离线或失败的打卡请求
@@ -180,20 +191,5 @@ impl ScrobbleService {
       self.pending_scrobbles.lock().len()
     );
     succeeded
-  }
-
-  /// 歌曲播放完毕或主动停止时触发收尾
-  pub fn on_track_ended(&self) {
-    let mut session_guard = self.active_session.lock();
-    if let Some(prev) = session_guard.take()
-      && prev.total_listened_ms >= 5_000
-    {
-      let db_c = self.db.clone();
-      tokio::task::spawn_blocking(move || {
-        if let Err(e) = HistoryRepo::record_play(&db_c, &prev.track, prev.total_listened_ms) {
-          tracing::warn!("写入听歌足迹失败 (track: {}): {e}", prev.track.title);
-        }
-      });
-    }
   }
 }

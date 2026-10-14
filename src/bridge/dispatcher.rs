@@ -115,6 +115,7 @@ impl ActionDispatcher {
           &self.ctx.client,
           self.qr_polling_cancel.clone(),
           self.ctx.event_tx.clone(),
+          self.ctx.scrobble_svc.clone(),
           action,
         );
       }

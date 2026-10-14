@@ -11,6 +11,7 @@ use crate::api::NcmClient;
 use crate::api::auth::QrCodeStatus;
 use crate::common::channel::{AppEvent, UiAction};
 use crate::common::error::{AppError, AppResult};
+use crate::service::scrobble_svc::ScrobbleService;
 
 /// 认证与账号服务
 pub struct AuthService;
@@ -31,11 +32,12 @@ impl AuthService {
     client: &NcmClient,
     cancel_slot: Arc<Mutex<Option<Arc<AtomicBool>>>>,
     event_tx: mpsc::UnboundedSender<AppEvent>,
+    scrobble: ScrobbleService,
     action: UiAction,
   ) {
     match action {
       UiAction::OpenLoginModal | UiAction::RefreshQr => {
-        Self::open_or_refresh_qr(client, cancel_slot, event_tx);
+        Self::open_or_refresh_qr(client, cancel_slot, event_tx, scrobble);
       }
       UiAction::CloseLoginModal => {
         Self::close_login_modal(&cancel_slot, &event_tx);
@@ -52,6 +54,7 @@ impl AuthService {
     client: &NcmClient,
     cancel_slot: Arc<Mutex<Option<Arc<AtomicBool>>>>,
     event_tx: mpsc::UnboundedSender<AppEvent>,
+    scrobble: ScrobbleService,
   ) {
     info!("生成扫码登录二维码");
     let _ = event_tx.send(AppEvent::LoginModalToggled(true));
@@ -126,6 +129,7 @@ impl AuthService {
                             break;
                           }
                           let _ = ev_tx.send(AppEvent::UserChanged(Some(profile)));
+                          scrobble.flush_unsynced_scrobbles().await;
                         }
                         tokio::time::sleep(Duration::from_millis(600)).await;
                         if qr_cancelled(&cancel) {
